@@ -1,0 +1,50 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "NASM Compile",
+            "type": "shell",
+            "command": "nasm",
+            "args": [
+                "-f",
+                "win64",
+                "${file}",
+                "-o",
+                "${fileBasenameNoExtension}.obj"
+            ],
+            "group": "build"
+        },
+        {
+            "label": "GCC Link",
+            "type": "shell",
+            "command": "gcc",
+            "args": [
+                "${fileBasenameNoExtension}.obj",
+                "-o",
+                "${fileBasenameNoExtension}.exe"
+            ],
+            "group": "build",
+            "dependsOn": ["NASM Compile"]
+        },
+        {
+            "label": "Run",
+            "type": "shell",
+            "command": "./${fileBasenameNoExtension}.exe",
+            "group": "test"
+        },
+        {
+            "label": "Build and Run",
+            "type": "shell",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "NASM Compile",
+                "GCC Link",
+                "Run"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        }
+    ]
+}
