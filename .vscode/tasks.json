@@ -8,20 +8,22 @@
             "args": [
                 "-f",
                 "win64",
-                "${file}",
                 "-o",
-                "${fileBasenameNoExtension}.obj"
+                "${fileBasenameNoExtension}.obj",
+                "${file}"
             ],
             "group": "build"
         },
         {
             "label": "GCC Link",
             "type": "shell",
-            "command": "gcc",
+            "command": "ld",
             "args": [
-                "${fileBasenameNoExtension}.obj",
+                "-s",
                 "-o",
-                "${fileBasenameNoExtension}.exe"
+                "${fileBasenameNoExtension}.exe",
+                "${fileBasenameNoExtension}.obj",
+                "-lkernel32"
             ],
             "group": "build",
             "dependsOn": ["NASM Compile"]
