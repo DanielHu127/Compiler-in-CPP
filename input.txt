@@ -1,3 +1,7 @@
 { 
     return 0;
 }
+{
+    return 12;
+    return 6;
+}

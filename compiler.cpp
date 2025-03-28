@@ -8,6 +8,7 @@
 #include <vector>
 #include <queue>
 #include <set>
+#include <iomanip>
 
 #define internal static
 #define global static
@@ -56,10 +57,10 @@ struct ParseNode{
     std::vector<ParseNode*> children = {};
 };
 
-internal ParseNode createTree(std::queue<Token> &Tokens);
+internal void createTree(std::queue<Token> &Tokens);
 internal void createBlock(std::queue<Token> &Tokens, ParseNode &Node);
 internal void createStatementList(std::queue<Token> &Tokens, ParseNode &Node);
-internal void createStatement(std::queue<Token> &Tokens, ParseNode &Node);
+//internal void createStatement(std::queue<Token> &Tokens, ParseNode &Node);
 internal void createReturnStatement(std::queue<Token> &Tokens, ParseNode &Node);
 internal void createExpression(std::queue<Token> &Tokens, ParseNode &Node);
 internal void createTerm(std::queue<Token> &Tokens, ParseNode &Node);
@@ -143,13 +144,13 @@ internal void readFile(std::ifstream &file){
     }
 }
 
-internal ParseNode createTree(std::queue<Token> &Tokens){
-    ParseNode tree = {ParseNode{Token{TokenType::TREE, "Tree"}}};
+internal void createTree(std::queue<Token> &Tokens, ParseNode *tree){
     while(!Tokens.empty()){
-        std::cout<<tree.token.value<<std::endl;
+        std::cout<<tree->token.value<<std::endl;
         if(Tokens.front().type == TokenType::OPEN_BLOCK){
             Tokens.pop();
-            createBlock(Tokens, tree);
+            createBlock(Tokens, *tree);
+            std::cout<<tree->children[0]->token.value<<std::endl;
             Tokens.pop();
         }
         else if(Tokens.front().type == TokenType::RETURN){
@@ -158,114 +159,123 @@ internal ParseNode createTree(std::queue<Token> &Tokens){
             //tree.children.push_back(&returnStatement);
         }
     }
-    return tree;
+    std::cout<<tree->token.value<<std::endl;
 }
 
 internal void createBlock(std::queue<Token> &Tokens, ParseNode &Node){
-    ParseNode block = {ParseNode{Token{TokenType::BLOCK, "Block"}}};
-    std::cout<<block.token.value<<std::endl;
-    createStatementList(Tokens, block);
-    Node.children.push_back(&block);
+    ParseNode * block = new ParseNode{Token{TokenType::BLOCK, "Block"}};
+    std::cout<<block->token.value<<std::endl;
+    createStatementList(Tokens, *block);
+    Node.children.push_back(block);
+    std::cout<<block->token.value<<std::endl;
 }
 
 internal void createStatementList(std::queue<Token> &Tokens, ParseNode &Node){
-    ParseNode statementList = {ParseNode{Token{TokenType::STATEMENTLIST, "Statement List"}}};
-    std::cout<<statementList.token.value<<std::endl;
+    ParseNode *statementList = new ParseNode{Token{TokenType::STATEMENTLIST, "Statement List"}};
+    std::cout<<statementList->token.value<<std::endl;
     while(Tokens.front().type!=TokenType::CLOSE_BLOCK){
         TokenType currentToken = Tokens.front().type;
-        ParseNode statement;
+        //ParseNode *statement;
         if(currentToken == TokenType::RETURN){
-            createReturnStatement(Tokens, statementList);
+            //statement = new ParseNode{Token{TokenType::STATEMENTLIST, "Statement List"}};
+            createReturnStatement(Tokens, *statementList);
         }else if(currentToken == TokenType::CLOSE_BLOCK){
             break;
         }else{
             std::cerr<<"Not valid statement"<<std::endl;
             exit(EXIT_FAILURE);
         }
-        Node.children.push_back(&statement);
     }
+    Node.children.push_back(statementList);
+    std::cout<<statementList->token.value<<std::endl;
 }
 
 internal void createReturnStatement(std::queue<Token> &Tokens, ParseNode &Node){
-    ParseNode returnStatement = {ParseNode{Tokens.front()}};
-    std::cout<<returnStatement.token.value<<std::endl;
+    ParseNode *returnStatement = new ParseNode{Tokens.front()};
+    std::cout<<returnStatement->token.value<<std::endl;
     Tokens.pop();
-    createExpression(Tokens, returnStatement);
-    createSemicolon(Tokens, returnStatement);
-    Node.children.push_back(&returnStatement);
+    createExpression(Tokens, *returnStatement);
+    createSemicolon(Tokens, *returnStatement);
+    std::cout<<returnStatement->token.value<<std::endl;
+    Node.children.push_back(returnStatement);
+    std::cout<<returnStatement->token.value<<std::endl;
 }
 
 internal void createExpression(std::queue<Token> &Tokens, ParseNode &Node){
-    ParseNode expression = {ParseNode{Token{TokenType::EXPRESSION, "Expression"}}};
-    std::cout<<expression.token.value<<std::endl;
+    ParseNode *expression = new ParseNode{Token{TokenType::EXPRESSION, "Expression"}};
+    std::cout<<expression->token.value<<std::endl;
     if(Tokens.front().type == TokenType::INT_LIT){
-        createTerm(Tokens, expression);
-        Node.children.push_back(&expression);
+        createTerm(Tokens, *expression);
+        Node.children.push_back(expression);
     }
 
     if(Tokens.front().type == TokenType::ADD){
-        createOperator(Tokens, expression);
-        expression.children.push_back(&expression);
+        createOperator(Tokens, *expression);
+        Node.children.push_back(expression);
     }
+    std::cout<<expression->token.value<<std::endl;
 }
 
 
 internal void createTerm(std::queue<Token> &Tokens, ParseNode &Node){
-    ParseNode term = {ParseNode{Token{TokenType::TERM, "Term"}}};
-    std::cout<<term.token.value<<std::endl;
+    ParseNode *term = new ParseNode{Token{TokenType::TERM, "Term"}};
+    std::cout<<term->token.value<<std::endl;
     if(Tokens.front().type == TokenType::INT_LIT){
-        createFactor(Tokens, term);
-        Node.children.push_back(&term);
+        createFactor(Tokens, *term);
+        Node.children.push_back(term);
     }
     if(Tokens.front().type == TokenType::MULTIPLY){
-        createOperator(Tokens, term);
-        createFactor(Tokens, term);
-        Node.children.push_back(&term);
+        createOperator(Tokens, *term);
+        createFactor(Tokens, *term);
+        Node.children.push_back(term);
     }
+    std::cout<<term->token.value<<std::endl;
 }
 
 internal void createFactor(std::queue<Token> &Tokens, ParseNode &Node){
-    ParseNode factor = {ParseNode{Token{TokenType::FACTOR, "Factor"}}};
-    std::cout<<factor.token.value<<std::endl;
+    ParseNode *factor = new ParseNode{Token{TokenType::FACTOR, "Factor"}};
+    std::cout<<factor->token.value<<std::endl;
     Tokens.pop();
-    Node.children.push_back(&factor);
+    Node.children.push_back(factor);
+    std::cout<<factor->token.value<<std::endl;
 }
 
 internal void createOperator(std::queue<Token> &Tokens, ParseNode &Node){
-    ParseNode oper = {ParseNode{Tokens.front()}};
+    ParseNode * oper = new ParseNode{Tokens.front()};
 
     if(Tokens.front().type == TokenType::MULTIPLY){
-        oper = {ParseNode{Tokens.front()}};
-        Node.children.push_back(&oper);
+        Node.children.push_back(oper);
         Tokens.pop();
     }
     else if(Tokens.front().type == TokenType::ADD){
-        oper = {ParseNode{Tokens.front()}};
-        Node.children.push_back(&oper);
+        Node.children.push_back(oper);
         Tokens.pop();
     }
+    std::cout<<oper->token.value<<std::endl;
 }
 
 internal void createSemicolon(std::queue<Token> &Tokens, ParseNode &Node){
     if(Tokens.front().type==TokenType::SEMICOLON){
-        ParseNode semicolon = ParseNode{Tokens.front()};
-        std::cout<<semicolon.token.value<<std::endl;
+        ParseNode * semicolon = new ParseNode{Tokens.front()};
+        std::cout<<semicolon->token.value<<std::endl;
         Tokens.pop();
-        Node.children.push_back(&semicolon);
+        Node.children.push_back(semicolon);
     }else{
         std::cerr<<"No semicolon found"<<std::endl;
         exit(EXIT_FAILURE);
     }
+    std::cout<<"Semicolon"<<std::endl;
 }
 
-internal void printParseTree(ParseNode &Node){
-    /*
-    std::cout<<Node.token.value<<std::endl;
-    for(int i = 0; i<Node.children.size();i++){
-        printParseTree(*Node.children[i]);
+internal void printParseTree(ParseNode *Node, int indent){
+    for(int i = 0; i<indent;i++){
+        std::cout<<"----";
     }
-    */
-    std::cout<<(*Node.children[0]).token.value<<std::endl;
+    std::cout<<Node->token.value<<std::endl;
+    for(int i = 0; i<Node->children.size();i++){
+        printParseTree(Node->children[i], indent+1);
+    }
+
     /*
     std::cout<<"Tree"<<std::endl;
     std::cout<<"----Block"<<std::endl;
@@ -276,6 +286,10 @@ internal void printParseTree(ParseNode &Node){
     std::cout<<"------------------------Factor"<<std::endl;
     std::cout<<"----------------Semicolon"<<std::endl;
     */
+}
+
+internal void deallocateParseTree(ParseNode &Node){
+
 }
 
 int main(int argc, char* argv[]){
@@ -291,10 +305,11 @@ int main(int argc, char* argv[]){
     std::ifstream file(argv[1]);
 
     std::queue<Token> Tokens = getTokens(file);
+    ParseNode* parseTree = new ParseNode{Token{TokenType::TREE, "Tree"}};
+    createTree(Tokens, parseTree);
 
-    ParseNode parseTree = createTree(Tokens);
-
-    printParseTree(parseTree);
+    std::cout<<"\n\n\n"<<std::endl;
+    printParseTree(parseTree, 0);
 
     /*
     while(!Tokens.empty()){
