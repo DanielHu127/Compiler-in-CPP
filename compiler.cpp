@@ -1,6 +1,22 @@
 // g++ compiler.cpp -o compiler
 // ./compiler.exe ./input.txt
 
+//THINGS TO ADD:
+/*
+ - Keywords: int, float, return, if, else, for, while, switch, class, public, private, virtual, namespace, constexpr, template
+ - Arithmetic operations: subtraction, division, modulo
+ - Logical Operators: && || !
+ - Comparison Operators: ==, !=, <, >, <=, >=
+ - Bitwise Operators: &, |, ^, ~, <<, >>
+ - Assignment Operators: =, +=, -=, *=, /=, %=
+ - Variables and Identifiers
+ - Control Flow statements: If, else, for, while
+ - Delimiters: ( ) { } [ ] ; ,
+ - Punctuation: :: . -> ... 
+ - Preprocesser: #include, #define, #ifdef, #pragma
+ - Comments: // /*
+*/
+
 #include <fstream>
 #include <sstream>
 #include <iostream>
