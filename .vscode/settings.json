@@ -63,6 +63,7 @@
         "set": "cpp",
         "span": "cpp",
         "xhash": "cpp",
-        "xtree": "cpp"
+        "xtree": "cpp",
+        "iomanip": "cpp"
     }
 }

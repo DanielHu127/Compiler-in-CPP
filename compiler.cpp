@@ -4,17 +4,28 @@
 //THINGS TO ADD:
 /*
  - Keywords: int, float, return, if, else, for, while, switch, class, public, private, virtual, namespace, constexpr, template
- - Arithmetic operations: subtraction, division, modulo
- - Logical Operators: && || !
- - Comparison Operators: ==, !=, <, >, <=, >=
- - Bitwise Operators: &, |, ^, ~, <<, >>
- - Assignment Operators: =, +=, -=, *=, /=, %=
+ - Operator Precedence: Unary, Multiplicative, Additive, Shift, Relational, Equality, Bitwise AND, Bitwise OR,
+                        Logical AND, Logical OR, Conditional (prob not), Assignment, Comma
+ - Unary Operations (Operations that come before the term): +, -, !, ~, *, & 
+ - Multiplicative Operations: *, /, %
+ - Additive Operations: +, - 
+ - Shift Operations: <<, >>
+ - Relational: <, <=, >, >=
+ - Equality: ==, !=
+ - Bitwise AND: &
+ - Bitwise OR: |
+ - Logical AND: &&
+ - Logical OR: ||
+ - Conditional (prob not): ?: 
+ - Assignment: =, +=, -=, *=, /=, %=, <<=, >>=, &=, ^=, |=
+ - Comma: ,
  - Variables and Identifiers
  - Control Flow statements: If, else, for, while
  - Delimiters: ( ) { } [ ] ; ,
  - Punctuation: :: . -> ... 
  - Preprocesser: #include, #define, #ifdef, #pragma
  - Comments: // /*
+ - Casts: (int), (double), (string), (char)
 */
 
 #include <fstream>
@@ -32,36 +43,37 @@
 
 enum TokenType{
     RETURN,
-    EXIT,
+    IDENT,
     OPEN_BLOCK,
     CLOSE_BLOCK,
-    OPERATOR,
+    OPEN_PAREN,
+    CLOSE_PAREN,
+    INT_DECL,
     INT_LIT,
+    BOOL_LIT,
+    ASSIGN,
     IF,
     ELSE,
     FOR,
     WHILE,
     ADD,
+    SUB,
     MULTIPLY,
+    DIVIDE,
+    MOD,
+    RELATION_OP,
+    LOGIC_OP,
     SEMICOLON,
-    //TEMP
+    EXIT,
     TREE,
+    //Parse
     BLOCK,
     STATEMENTLIST,
     EXPRESSION,
     TERM,
-    FACTOR
+    FACTOR,
+    CONDITION
 };
-
-/*
-enum ParseType{
-    TREE,
-    BLOCK,
-    EXPRESSION,
-    TERM,
-    FACTOR
-};
-*/
 
 struct Token{
     TokenType type;
@@ -73,10 +85,11 @@ struct ParseNode{
     std::vector<ParseNode*> children = {};
 };
 
+std::vector<std::string> identifiers = {};
+
 internal void createTree(std::queue<Token> &Tokens);
 internal void createBlock(std::queue<Token> &Tokens, ParseNode &Node);
 internal void createStatementList(std::queue<Token> &Tokens, ParseNode &Node);
-//internal void createStatement(std::queue<Token> &Tokens, ParseNode &Node);
 internal void createReturnStatement(std::queue<Token> &Tokens, ParseNode &Node);
 internal void createExpression(std::queue<Token> &Tokens, ParseNode &Node);
 internal void createTerm(std::queue<Token> &Tokens, ParseNode &Node);
@@ -99,18 +112,23 @@ std::queue<Token> getTokens(std::ifstream &file){
             }
             //Check for a alnum token (ex. return, for, if)
             if(buffer.str()=="return"){
-                Tokens.push(Token{TokenType::RETURN, "RETURN"});
+                Tokens.push(Token{TokenType::RETURN, "return"});
             }else if(buffer.str()=="exit"){
-                Tokens.push(Token{TokenType::EXIT, "EXIT"});
+                Tokens.push(Token{TokenType::EXIT, "exit"});
             }else if(buffer.str()=="if"){
-                Tokens.push(Token{TokenType::IF, "IF"});
+                Tokens.push(Token{TokenType::IF, "if"});
             }else if(buffer.str()=="else"){
-                Tokens.push(Token{TokenType::ELSE, "ELSE"});
+                Tokens.push(Token{TokenType::ELSE, "else"});
             }else if(buffer.str()=="for"){
-                Tokens.push(Token{TokenType::FOR, "FOR"});
+                Tokens.push(Token{TokenType::FOR, "for"});
+            }else if(buffer.str()=="int"){
+                Tokens.push(Token{TokenType::INT_DECL, "int"});
+            }else if(buffer.str()=="true"){
+                Tokens.push(Token{TokenType::BOOL_LIT, "true"});
+            }else if(buffer.str()=="false"){
+                Tokens.push(Token{TokenType::BOOL_LIT, "false"});
             }else{
-                std::cerr<<"This Is Wrong"<<std::endl;
-                exit(EXIT_FAILURE);
+                Tokens.push(Token{TokenType::IDENT, buffer.str()});
             }
             buffer.str("");
             buffer.clear();
@@ -133,15 +151,26 @@ std::queue<Token> getTokens(std::ifstream &file){
             if(ch==';'){
                 Tokens.push(Token{TokenType::SEMICOLON, ";"});
             }else if(ch=='{'){
-                Tokens.push(Token{TokenType::OPEN_BLOCK, "OPEN_BLOCK"});
+                Tokens.push(Token{TokenType::OPEN_BLOCK, "{"});
             }else if(ch=='}'){
-                Tokens.push(Token{TokenType::CLOSE_BLOCK, "CLOSE_BLOCK"});
+                Tokens.push(Token{TokenType::CLOSE_BLOCK, "}"});
             }else if(ch=='+'){
                 Tokens.push(Token{TokenType::ADD, "+"});
+            }else if(ch=='-'){
+                Tokens.push(Token{TokenType::SUB, "-"});
             }else if(ch=='*'){
                 Tokens.push(Token{TokenType::MULTIPLY, "*"});
-            }
-            else{
+            }else if(ch=='/'){
+                Tokens.push(Token{TokenType::DIVIDE, "/"});
+            }else if(ch=='%'){
+                Tokens.push(Token{TokenType::MOD, "%"});
+            }else if(ch=='('){
+                Tokens.push(Token{TokenType::OPEN_PAREN, "("});
+            }else if(ch==')'){
+                Tokens.push(Token{TokenType::CLOSE_PAREN, ")"});
+            }else if(ch=='='){
+                Tokens.push(Token{TokenType::ASSIGN, "="});
+            }else{
                 std::cerr<<"Special Character Error"<<std::endl;
                 exit(EXIT_FAILURE);
             }
@@ -192,6 +221,8 @@ internal void createStatementList(std::queue<Token> &Tokens, ParseNode &Node){
         TokenType currentToken = Tokens.front().type;
         if(currentToken == TokenType::RETURN){
             createReturnStatement(Tokens, *statementList);
+        }else if(currentToken == TokenType::IF){
+            createIfStatement(Tokens, *statementList);
         }else if(currentToken == TokenType::CLOSE_BLOCK){
             break;
         }else{
@@ -201,6 +232,27 @@ internal void createStatementList(std::queue<Token> &Tokens, ParseNode &Node){
     }
     Node.children.push_back(statementList);
     std::cout<<statementList->token.value<<std::endl;
+}
+
+internal void createIfStatement(std::queue<Token> &Tokens, ParseNode &Node){
+    ParseNode *ifStatement = new ParseNode{Tokens.front()};
+    std::cout<<ifStatement->token.value<<std::endl;
+    Tokens.pop();
+    if(Tokens.front().type == OPEN_PAREN){
+        Tokens.pop();
+        createCondition(Tokens, *ifStatement);
+        createBlock(Tokens, *ifStatement);
+        Node.children.push_back(ifStatement);
+        if(Tokens.front().type == CLOSE_PAREN){
+            Tokens.pop();
+        }else{
+            std::cerr<<"Mismatched () in ifStatement"<<std::endl;
+            exit(EXIT_FAILURE);
+        }
+    }else{
+        std::cerr<<"If statement doesn't have ()"<<std::endl;
+        exit(EXIT_FAILURE);
+    }
 }
 
 internal void createReturnStatement(std::queue<Token> &Tokens, ParseNode &Node){
@@ -214,17 +266,28 @@ internal void createReturnStatement(std::queue<Token> &Tokens, ParseNode &Node){
     std::cout<<returnStatement->token.value<<std::endl;
 }
 
+internal void createCondition(std::queue<Token> &Tokens, ParseNode &Node){
+    ParseNode *condition = new ParseNode{Token{TokenType::CONDITION, "Condition"}};
+    std::cout<<condition->token.value<<std::endl;
+    while(true){ //NOTE:FIX
+        createExpression(Tokens, *condition);
+    }
+    Node.children.push_back(condition);
+}
+
 internal void createExpression(std::queue<Token> &Tokens, ParseNode &Node){
     ParseNode *expression = new ParseNode{Token{TokenType::EXPRESSION, "Expression"}};
     std::cout<<expression->token.value<<std::endl;
+    TokenType currentToken;
     while(Tokens.front().type == TokenType::INT_LIT){
         if(Tokens.front().type == TokenType::INT_LIT){
             createTerm(Tokens, *expression);
         }
-
-        if(Tokens.front().type == TokenType::ADD){
+        currentToken = Tokens.front().type;
+        if(currentToken == ADD || currentToken == SUB){
             createOperator(Tokens, *expression);
         }
+
     }
     Node.children.push_back(expression);
     std::cout<<expression->token.value<<std::endl;
@@ -234,11 +297,15 @@ internal void createExpression(std::queue<Token> &Tokens, ParseNode &Node){
 internal void createTerm(std::queue<Token> &Tokens, ParseNode &Node){
     ParseNode *term = new ParseNode{Token{TokenType::TERM, "Term"}};
     std::cout<<term->token.value<<std::endl;
+    TokenType currentToken;
     while(Tokens.front().type == TokenType::INT_LIT){
         if(Tokens.front().type == TokenType::INT_LIT){
             createFactor(Tokens, *term);
         }
-        if(Tokens.front().type == TokenType::MULTIPLY){
+        currentToken = Tokens.front().type;
+        if( currentToken == MULTIPLY || 
+            currentToken == DIVIDE || 
+            currentToken == MOD){
             createOperator(Tokens, *term);
         }
     }
@@ -247,7 +314,7 @@ internal void createTerm(std::queue<Token> &Tokens, ParseNode &Node){
 }
 
 internal void createFactor(std::queue<Token> &Tokens, ParseNode &Node){
-    ParseNode *factor = new ParseNode{Token{TokenType::FACTOR, "Factor"}};
+    ParseNode *factor = new ParseNode{Tokens.front()};
     std::cout<<factor->token.value<<std::endl;
     Tokens.pop();
     Node.children.push_back(factor);
@@ -256,14 +323,18 @@ internal void createFactor(std::queue<Token> &Tokens, ParseNode &Node){
 
 internal void createOperator(std::queue<Token> &Tokens, ParseNode &Node){
     ParseNode * oper = new ParseNode{Tokens.front()};
+    TokenType currentToken = Tokens.front().type;
 
-    if(Tokens.front().type == TokenType::MULTIPLY){
+    if( currentToken == ADD || 
+        currentToken == SUB || 
+        currentToken == MULTIPLY || 
+        currentToken == DIVIDE || 
+        currentToken == MOD){
         Node.children.push_back(oper);
         Tokens.pop();
-    }
-    else if(Tokens.front().type == TokenType::ADD){
-        Node.children.push_back(oper);
-        Tokens.pop();
+    }else{
+        std::cerr<<"Not an operator: "<<Tokens.front().value<<std::endl;
+        exit(EXIT_FAILURE);
     }
     std::cout<<oper->token.value<<std::endl;
 }
