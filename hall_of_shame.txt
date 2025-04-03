@@ -1,0 +1,223 @@
+/*
+
+internal void createFactor(std::vector<Token> &Tokens, ParseNode &Node, int &currentIndex){
+    if(Tokens[currentIndex].type == OPEN_PAREN){
+        ParseNode *parenBlock = new ParseNode{Token{TokenType::PARENTHESES, "Paren Block()"}};
+        currentIndex++;
+        createLogical(Tokens, *parenBlock, currentIndex);
+        if(Tokens[currentIndex].type != CLOSE_PAREN){
+            std::cerr<<"Mismatched parentheses"<<std::endl;
+            exit(EXIT_FAILURE);
+        }
+        Node.children.push_back(parenBlock);
+        currentIndex++;
+    }else{
+        ParseNode *factor = new ParseNode{Tokens[currentIndex]};
+        std::cout<<factor->token.value<<std::endl;
+        std::cout<<currentIndex<<std::endl;
+        currentIndex++;
+        
+        Node.children.push_back(factor);
+        std::cout<<factor->token.value<<std::endl;
+    }
+}
+
+internal void createTerm(std::vector<Token> &Tokens, ParseNode &Node, int &currentIndex){
+    ParseNode *termOperator = new ParseNode{Token{TokenType::TERM, "Term"}};
+    createFactor(Tokens, *termOperator, currentIndex);
+    
+    std::cout<<termOperator->token.value<<std::endl;
+    TokenType currentToken = Tokens[currentIndex].type;
+    if(currentIndex < Tokens.size() && (currentToken == MULTIPLY || currentToken == DIVIDE || currentToken == MOD)){
+        Token operatorToken = Tokens[currentIndex++];
+        termOperator->token = operatorToken;
+        if(currentIndex < Tokens.size()-1 && (Tokens[currentIndex+1].type == MULTIPLY || Tokens[currentIndex+1].type == DIVIDE || Tokens[currentIndex+1].type == MOD)){
+            createTerm(Tokens, *termOperator, currentIndex);
+        }else{
+            createFactor(Tokens, *termOperator, currentIndex);
+        }
+    }
+    Node.children.push_back(termOperator);
+    std::cout<<termOperator->token.value<<std::endl;
+}
+
+internal void createExpression(std::vector<Token> &Tokens, ParseNode &Node, int &currentIndex){
+    ParseNode *expressionOperator = new ParseNode{Token{TokenType::EXPRESSION, "Expression"}};
+    createTerm(Tokens, *expressionOperator, currentIndex);
+
+    std::cout<<expressionOperator->token.value<<std::endl;
+    TokenType currentToken = Tokens[currentIndex].type;
+    if(currentIndex < Tokens.size() && (currentToken == ADD || currentToken == SUB)){
+        Token operatorToken = Tokens[currentIndex++];
+        expressionOperator->token = operatorToken;
+        if(currentIndex < Tokens.size()-1 && (Tokens[currentIndex+1].type == ADD || Tokens[currentIndex+1].type == SUB)){
+            createExpression(Tokens, *expressionOperator, currentIndex);
+        }else{
+            createTerm(Tokens, *expressionOperator, currentIndex);
+        }
+    }
+    Node.children.push_back(expressionOperator);
+    std::cout<<expressionOperator->token.value<<std::endl;
+}
+
+internal void createRelational(std::vector<Token> &Tokens, ParseNode &Node, int &currentIndex){
+    ParseNode *relationalOperator = new ParseNode{Token{TokenType::RELATION_OP, "Relational"}};
+    createExpression(Tokens, *relationalOperator, currentIndex);
+
+    std::cout<<relationalOperator->token.value<<std::endl;
+    TokenType currentToken = Tokens[currentIndex].type;
+    if(currentIndex < Tokens.size() && (currentToken == RELATION_OP)){
+        //std::cout<<relationalOperator->token.value<<std::endl;
+        //std::cout<<relationalOperator->token.value<<std::endl;
+        //std::cout<<relationalOperator->token.value<<std::endl;
+        //std::cout<<relationalOperator->token.value<<std::endl;
+        //std::cout<<relationalOperator->token.value<<std::endl;
+        Token operatorToken = Tokens[currentIndex++];
+        relationalOperator->token = operatorToken;
+        if(currentIndex < Tokens.size()-1 && (Tokens[currentIndex+1].type == RELATION_OP)){
+            createRelational(Tokens, *relationalOperator, currentIndex);
+        }else{
+            createExpression(Tokens, *relationalOperator, currentIndex);
+        }
+    }
+    Node.children.push_back(relationalOperator);
+    std::cout<<relationalOperator->token.value<<std::endl;
+}
+
+internal void createLogical(std::vector<Token> &Tokens, ParseNode &Node, int &currentIndex){
+    TokenType currentToken = Tokens[currentIndex].type;
+    ParseNode *logicalOperator = new ParseNode{Token{TokenType::LOGICAL, "Logical"}};
+    createRelational(Tokens, *logicalOperator, currentIndex);
+    while(currentIndex < Tokens.size() && (currentToken == LOGICAL_AND || currentToken == LOGICAL_OR)){
+        logicalOperator = new ParseNode{Token{TokenType::LOGICAL, "Logical"}};
+        createRelational(Tokens, *logicalOperator, currentIndex);
+        Token operatorToken = Tokens[currentIndex++];
+        logicalOperator->token = operatorToken;
+        if(currentIndex < Tokens.size()-1 && (Tokens[currentIndex+1].type == LOGICAL_AND || Tokens[currentIndex+1].type == LOGICAL_OR)){
+            std::cout<<"WHY is LOGICAL HERE"<<std::endl;
+            createLogical(Tokens, *logicalOperator, currentIndex);
+        }else{
+            std::cout<<"WHY is RELATIONAL HERE"<<std::endl;
+            createRelational(Tokens, *logicalOperator, currentIndex);
+        }
+        currentToken = Tokens[currentIndex].type;
+    }
+    /*
+    ParseNode *logicalOperator = new ParseNode{Token{TokenType::LOGICAL, "Logical"}};
+    createRelational(Tokens, *logicalOperator, currentIndex);
+    TokenType currentToken = Tokens[currentIndex].type;
+    if(currentIndex < Tokens.size() && (currentToken == LOGICAL_AND || currentToken == LOGICAL_OR)){
+        Token operatorToken = Tokens[currentIndex++];
+        logicalOperator->token = operatorToken;
+        currentIndex--;
+        std::cout<<"This is the current index: "<<currentIndex<<std::endl;
+        if(currentIndex < Tokens.size()-1 && (Tokens[currentIndex+1].type == LOGICAL_AND || Tokens[currentIndex+1].type == LOGICAL_OR)){
+            std::cout<<"WHY is LOGICAL HERE"<<std::endl;
+            createLogical(Tokens, *logicalOperator, currentIndex);
+            currentIndex++;
+        }
+        if(currentIndex<Tokens.size()-1 && (Tokens[currentIndex+1].type != LOGICAL_AND && Tokens[currentIndex+1].type != LOGICAL_OR)){
+            std::cout<<"WHY is RELATIONAL HERE"<<std::endl;
+            createRelational(Tokens, *logicalOperator, currentIndex);
+        }
+    }
+        */
+    /*
+    while(currentIndex < Tokens.size() && (currentToken == LOGICAL_AND || currentToken == LOGICAL_OR)){
+        std::cout<<"WHY AM I HERE"<<std::endl;
+        std::cout<<logicalOperator->token.value<<std::endl;
+        std::cout<<currentIndex<<std::endl;
+        Token operatorToken = Tokens[currentIndex];
+        logicalOperator->token = operatorToken;
+        if(currentIndex < Tokens.size() && (Tokens[currentIndex].type == LOGICAL_AND || Tokens[currentIndex].type == LOGICAL_OR)){
+            std::cout<<"I AM LOGICALLLLLL"<<std::endl;
+            currentIndex++;
+            createLogical(Tokens, *logicalOperator, currentIndex);
+        }else{
+            std::cout<<"I AM RELATIONALLL"<<std::endl;
+            std::cout<<logicalOperator->token.value<<std::endl;
+            createRelational(Tokens, *logicalOperator, currentIndex);
+        }
+        //std::cout<<currentIndex<<std::endl;
+        //std::cout<<currentIndex<<std::endl;
+        //std::cout<<currentIndex<<std::endl;
+        //std::cout<<currentIndex<<std::endl;
+        currentToken = Tokens[currentIndex].type;
+    }  
+    Node.children.push_back(logicalOperator);
+    //std::cout<<logicalOperator->token.value<<std::endl;
+}
+*/
+
+internal bool isOperator(ParseNode*node){
+    TokenType nodeType = node->token.type;
+    return( nodeType == MULTIPLY || nodeType == DIVIDE || nodeType == MOD || 
+        nodeType == ADD || nodeType == SUB || 
+        nodeType == LESS || nodeType == LESS_EQUAL || nodeType == GREATER || nodeType == GREATER_EQUAL ||
+        nodeType == IS_EQUAL || nodeType == NOT_EQUAL ||
+        nodeType == LOGICAL_AND || nodeType == LOGICAL_OR );
+}
+
+internal ParseNode* parseExpression(int minPrec, std::vector<Token> &Tokens, int &index);
+
+internal ParseNode*parseIncreasingPrec(ParseNode* left, int &minPrec, std::vector<Token> &Tokens, int &index ){
+    ParseNode*next = new ParseNode{Tokens[index]};
+    std::cout<<index<<std::endl;
+
+    if (!isOperator(next)){
+        std::cout<<index<<std::endl;
+        return left;
+    }
+    int nextPrec = getPrecedence(next->token.type);
+
+    if(nextPrec<=minPrec){
+        return left;
+    }else{
+        ParseNode*right = parseExpression(nextPrec, Tokens, index);
+        std::cout<<right->token.value<<std::endl;
+        ParseNode*binaryNode = makeBinaryNode(left, next->token, right);
+        std::cout<<std::endl;
+        std::cout<<binaryNode->token.value<<std::endl;
+        std::cout<<binaryNode->children[0]->token.value<<std::endl;
+        std::cout<<binaryNode->children[1]->token.value<<std::endl;
+        std::cout<<std::endl;
+        return binaryNode;
+    }
+}
+
+internal ParseNode* parseExpression(int minPrec, std::vector<Token> &Tokens, int &index ){
+    ParseNode* left = new ParseNode{Tokens[index++]};
+    while(true){
+        ParseNode*node = parseIncreasingPrec(left, minPrec, Tokens, index);
+        //std::cout<<node.token.value<<" "<<left.token.value<<std::endl<<std::endl;
+        if(node->token.value==left->token.value) {break;}
+
+        left = node;
+    }
+    return left;
+}
+
+
+/*
+
+Tokens = [1, +, 1]
+index = 0
+
++
+----1
+----1
+
+parseExpression(-1, Tokens, index)
+left = 1;
+parseIncreasingPrec(left, -1, Tokens, 0)
+index = 1
+next = +
+nextPrec = 3
+
+right = parseExpression(3, Tokens, 1)
+left = +
+parseIncreasingPrec(+, 3, Tokens, 1)
+index = 2
+next = 1
+
+*/

@@ -7,16 +7,17 @@
  - Operator Precedence: Unary, Multiplicative, Additive, Shift, Relational, Equality, Bitwise AND, Bitwise OR,
                         Logical AND, Logical OR, Conditional (prob not), Assignment, Comma
  - Unary Operations (Operations that come before the term): +, -, !, ~, *, & 
- - Multiplicative Operations: *, /, %
- - Additive Operations: +, - 
+ - Exponent Operations: ^^
+ + Multiplicative Operations: *, /, %
+ + Additive Operations: +, - 
  - Shift Operations: <<, >>
- - Relational: <, <=, >, >=
- - Equality: ==, !=
+ + Relational: <, <=, >, >=
+ + Equality: ==, !=
  - Bitwise AND: &
  - Bitwise XOR: ^
  - Bitwise OR: |
- - Logical AND: &&
- - Logical OR: ||
+ + Logical AND: &&
+ + Logical OR: ||
  - Conditional (prob not): ?: 
  - Assignment: =, +=, -=, *=, /=, %=, <<=, >>=, &=, ^=, |=
  - Comma: ,
@@ -57,14 +58,27 @@ enum TokenType{
     ELSE,
     FOR,
     WHILE,
+
+    LOGICAL_OR,
+    LOGICAL_AND,
+    BIT_OR,
+    BIT_XOR,
+    BIT_AND,
+    IS_EQUAL,
+    NOT_EQUAL,
+    LESS,
+    LESS_EQUAL,
+    GREATER,
+    GREATER_EQUAL,
+    L_SHIFT,
+    R_SHIFT,
     ADD,
     SUB,
     MULTIPLY,
     DIVIDE,
     MOD,
-    RELATION_OP,
-    LOGICAL_AND,
-    LOGICAL_OR,
+    EXPONENT,
+
     SEMICOLON,
     EXIT,
     TREE,
@@ -95,7 +109,6 @@ struct ParseNode{
 std::vector<std::string> identifiers = {};
 
 internal void createBlock(std::vector<Token> &Tokens, ParseNode &Node, int &currentIndex);
-internal void createLogical(std::vector<Token> &Tokens, ParseNode &Node, int &currentIndex);
 
 internal void consumeTokens(std::vector<Token> &Tokens, int left, int right){
     for(int i = right; i>=left;i--){
@@ -167,48 +180,66 @@ std::vector<Token> getTokens(std::ifstream &file){
                 Tokens.push_back(Token{TokenType::OPEN_BLOCK, "{"});
             }else if(ch=='}'){
                 Tokens.push_back(Token{TokenType::CLOSE_BLOCK, "}"});
-            }else if(ch=='+'){
-                Tokens.push_back(Token{TokenType::ADD, "+"});
-            }else if(ch=='-'){
-                Tokens.push_back(Token{TokenType::SUB, "-"});
-            }else if(ch=='*'){
-                Tokens.push_back(Token{TokenType::MULTIPLY, "*"});
-            }else if(ch=='/'){
-                Tokens.push_back(Token{TokenType::DIVIDE, "/"});
-            }else if(ch=='#'){
-                while(file.peek()!='\n'){
-                    file.get(ch);
-                }
-            }else if(ch=='%'){
-                Tokens.push_back(Token{TokenType::MOD, "%"});
             }else if(ch=='('){
                 Tokens.push_back(Token{TokenType::OPEN_PAREN, "("});
             }else if(ch==')'){
                 Tokens.push_back(Token{TokenType::CLOSE_PAREN, ")"});
-            }else if(ch=='=' && file.peek()!= '='){
-                Tokens.push_back(Token{TokenType::ASSIGN, "="});
+            }else if(ch=='^' && file.peek()== '^'){
+                Tokens.push_back(Token{TokenType::EXPONENT, "^^"});
+                file.get(ch);
+            }else if(ch=='*'){
+                Tokens.push_back(Token{TokenType::MULTIPLY, "*"});
+            }else if(ch=='/'){
+                Tokens.push_back(Token{TokenType::DIVIDE, "/"});
+            }else if(ch=='%'){
+                Tokens.push_back(Token{TokenType::MOD, "%"});
+            }else if(ch=='+'){
+                Tokens.push_back(Token{TokenType::ADD, "+"});
+            }else if(ch=='-'){
+                Tokens.push_back(Token{TokenType::SUB, "-"});
+            }else if(ch=='<' && file.peek()=='<'){
+                Tokens.push_back(Token{TokenType::L_SHIFT, "<<"});
+                file.get(ch);
+            }else if(ch=='>' && file.peek()=='>'){
+                Tokens.push_back(Token{TokenType::R_SHIFT, ">>"});
+                file.get(ch);
+            }else if(ch=='>' && file.peek()!='='){
+                Tokens.push_back(Token{TokenType::GREATER, ">"});
+            }else if(ch=='>' && file.peek()=='='){
+                Tokens.push_back(Token{TokenType::GREATER_EQUAL, ">="});
+                file.get(ch);
+            }else if(ch=='<' && file.peek()!='='){
+                Tokens.push_back(Token{TokenType::LESS, "<"});
+            }else if(ch=='<' && file.peek()=='='){
+                Tokens.push_back(Token{TokenType::LESS_EQUAL, "<="});
+                file.get(ch);
+            }else if(ch=='=' && file.peek()=='='){
+                Tokens.push_back(Token{TokenType::IS_EQUAL, "=="});
+                file.get(ch);
+            }else if(ch=='!' && file.peek()=='='){
+                Tokens.push_back(Token{TokenType::NOT_EQUAL, "!="});
+                file.get(ch);
+            }else if(ch=='&' && file.peek()!='&'){
+                Tokens.push_back(Token{TokenType::BIT_AND, "&"});
+                file.get(ch);
+            }else if(ch=='^' && file.peek()!='^'){
+                Tokens.push_back(Token{TokenType::BIT_XOR, "^"});
+                file.get(ch);
+            }else if(ch=='|' && file.peek()!='|'){
+                Tokens.push_back(Token{TokenType::BIT_OR, "|"});
+                file.get(ch);
             }else if(ch=='&' && file.peek()=='&'){
                 Tokens.push_back(Token{TokenType::LOGICAL_AND, "&&"});
                 file.get(ch);
             }else if(ch=='|' && file.peek()=='|'){
                 Tokens.push_back(Token{TokenType::LOGICAL_OR, "||"});
                 file.get(ch);
-            }else if(ch=='=' && file.peek()=='='){
-                Tokens.push_back(Token{TokenType::RELATION_OP, "=="});
-                file.get(ch);
-            }else if(ch=='!' && file.peek()=='='){
-                Tokens.push_back(Token{TokenType::RELATION_OP, "!="});
-                file.get(ch);
-            }else if(ch=='>' && file.peek()!='='){
-                Tokens.push_back(Token{TokenType::RELATION_OP, ">"});
-            }else if(ch=='>' && file.peek()=='='){
-                Tokens.push_back(Token{TokenType::RELATION_OP, ">="});
-                file.get(ch);
-            }else if(ch=='<' && file.peek()!='='){
-                Tokens.push_back(Token{TokenType::RELATION_OP, "<"});
-            }else if(ch=='<' && file.peek()=='='){
-                Tokens.push_back(Token{TokenType::RELATION_OP, "<="});
-                file.get(ch);
+            }else if(ch=='=' && file.peek()!= '='){
+                Tokens.push_back(Token{TokenType::ASSIGN, "="});
+            }else if(ch=='#'){
+                while(file.peek()!='\n'){
+                    file.get(ch);
+                }
             }else{
                 std::cerr<<"Special Character Error"<<std::endl;
                 exit(EXIT_FAILURE);
@@ -240,160 +271,79 @@ internal void createSemicolon(std::vector<Token> &Tokens, ParseNode &Node, int &
     std::cout<<"Semicolon"<<std::endl;
 }
 
-internal void createFactor(std::vector<Token> &Tokens, ParseNode &Node, int &currentIndex){
-    if(Tokens[currentIndex].type == OPEN_PAREN){
-        ParseNode *parenBlock = new ParseNode{Token{TokenType::PARENTHESES, "Paren Block()"}};
-        currentIndex++;
-        createLogical(Tokens, *parenBlock, currentIndex);
-        if(Tokens[currentIndex].type != CLOSE_PAREN){
-            std::cerr<<"Mismatched parentheses"<<std::endl;
-            exit(EXIT_FAILURE);
-        }
-        Node.children.push_back(parenBlock);
-        currentIndex++;
+//true is left->right, false is right->left
+internal bool getAssociativity(TokenType t){
+    if(t == EXPONENT){
+        return false;
     }else{
-        ParseNode *factor = new ParseNode{Tokens[currentIndex]};
-        std::cout<<factor->token.value<<std::endl;
-        std::cout<<currentIndex<<std::endl;
-        currentIndex++;
-        
-        Node.children.push_back(factor);
-        std::cout<<factor->token.value<<std::endl;
+        return true;
     }
 }
 
-internal void createTerm(std::vector<Token> &Tokens, ParseNode &Node, int &currentIndex){
-    ParseNode *termOperator = new ParseNode{Token{TokenType::TERM, "Term"}};
-    createFactor(Tokens, *termOperator, currentIndex);
-    
-    std::cout<<termOperator->token.value<<std::endl;
-    TokenType currentToken = Tokens[currentIndex].type;
-    if(currentIndex < Tokens.size() && (currentToken == MULTIPLY || currentToken == DIVIDE || currentToken == MOD)){
-        Token operatorToken = Tokens[currentIndex++];
-        termOperator->token = operatorToken;
-        if(currentIndex < Tokens.size()-1 && (Tokens[currentIndex+1].type == MULTIPLY || Tokens[currentIndex+1].type == DIVIDE || Tokens[currentIndex+1].type == MOD)){
-            createTerm(Tokens, *termOperator, currentIndex);
-        }else{
-            createFactor(Tokens, *termOperator, currentIndex);
-        }
+internal int getPrecedence(TokenType t){
+    int precedence = -1000;
+    if(t == EXPONENT){precedence = 11;}
+    if(t == MULTIPLY || t == DIVIDE || t == MOD){precedence = 10;}
+    if(t == ADD || t == SUB){precedence = 9;}
+    if(t == L_SHIFT || t == R_SHIFT){precedence = 8;}
+    if(t == LESS || t == LESS_EQUAL || t == GREATER || t == GREATER_EQUAL){precedence = 7;}
+    if(t == IS_EQUAL || t == NOT_EQUAL){precedence = 6;}
+    if(t == BIT_AND){precedence = 5;}
+    if(t == BIT_XOR){precedence = 4;}
+    if(t == BIT_OR){precedence = 3;}
+    if(t == LOGICAL_AND){precedence = 2;}
+    if(t == LOGICAL_OR){precedence = 1;}
+    if(t == IDENT || t == OPEN_PAREN || t == INT_LIT){precedence = 0;}
+    if(t == SEMICOLON || t == CLOSE_BLOCK || t == CLOSE_PAREN){precedence = -1;}
+    if (precedence==-1000){
+        std::cerr<<"invalid operator precedence calculation"<<std::endl;
+        exit(EXIT_FAILURE);
     }
-    Node.children.push_back(termOperator);
-    std::cout<<termOperator->token.value<<std::endl;
+    return precedence;
 }
 
-internal void createExpression(std::vector<Token> &Tokens, ParseNode &Node, int &currentIndex){
-    ParseNode *expressionOperator = new ParseNode{Token{TokenType::EXPRESSION, "Expression"}};
-    createTerm(Tokens, *expressionOperator, currentIndex);
-
-    std::cout<<expressionOperator->token.value<<std::endl;
-    TokenType currentToken = Tokens[currentIndex].type;
-    if(currentIndex < Tokens.size() && (currentToken == ADD || currentToken == SUB)){
-        Token operatorToken = Tokens[currentIndex++];
-        expressionOperator->token = operatorToken;
-        if(currentIndex < Tokens.size()-1 && (Tokens[currentIndex+1].type == ADD || Tokens[currentIndex+1].type == SUB)){
-            createExpression(Tokens, *expressionOperator, currentIndex);
-        }else{
-            createTerm(Tokens, *expressionOperator, currentIndex);
-        }
-    }
-    Node.children.push_back(expressionOperator);
-    std::cout<<expressionOperator->token.value<<std::endl;
+internal ParseNode* makeBinaryNode(ParseNode* left, Token oper, ParseNode* right){
+    ParseNode * binaryNode = new ParseNode{oper, {}};
+    binaryNode->children.push_back(left);
+    binaryNode->children.push_back(right);
+    //std::cout<<binaryNode.token.value<<std::endl<<std::endl; 
+    return binaryNode;
 }
 
-internal void createRelational(std::vector<Token> &Tokens, ParseNode &Node, int &currentIndex){
-    ParseNode *relationalOperator = new ParseNode{Token{TokenType::RELATION_OP, "Relational"}};
-    createExpression(Tokens, *relationalOperator, currentIndex);
+internal ParseNode* createExpression(int minPrec, std::vector<Token> &Tokens, int &index);
 
-    std::cout<<relationalOperator->token.value<<std::endl;
-    TokenType currentToken = Tokens[currentIndex].type;
-    if(currentIndex < Tokens.size() && (currentToken == RELATION_OP)){
-        //std::cout<<relationalOperator->token.value<<std::endl;
-        //std::cout<<relationalOperator->token.value<<std::endl;
-        //std::cout<<relationalOperator->token.value<<std::endl;
-        //std::cout<<relationalOperator->token.value<<std::endl;
-        //std::cout<<relationalOperator->token.value<<std::endl;
-        Token operatorToken = Tokens[currentIndex++];
-        relationalOperator->token = operatorToken;
-        if(currentIndex < Tokens.size()-1 && (Tokens[currentIndex+1].type == RELATION_OP)){
-            createRelational(Tokens, *relationalOperator, currentIndex);
-        }else{
-            createExpression(Tokens, *relationalOperator, currentIndex);
-        }
+internal ParseNode* leftDenotation(ParseNode* left, ParseNode* next, std::vector<Token> &Tokens, int &index){
+    ParseNode* binaryOp;
+    if(getAssociativity(next->token.type)){
+        binaryOp = makeBinaryNode(left, next->token, createExpression(getPrecedence(next->token.type), Tokens, index));
+    }else{
+        binaryOp = makeBinaryNode(left, next->token, createExpression(getPrecedence(next->token.type)-1, Tokens, index));
     }
-    Node.children.push_back(relationalOperator);
-    std::cout<<relationalOperator->token.value<<std::endl;
+    return binaryOp;
 }
 
-internal void createLogical(std::vector<Token> &Tokens, ParseNode &Node, int &currentIndex){
-    TokenType currentToken = Tokens[currentIndex].type;
-    ParseNode *logicalOperator = new ParseNode{Token{TokenType::LOGICAL, "Logical"}};
-    createRelational(Tokens, *logicalOperator, currentIndex);
-    while(currentIndex < Tokens.size() && (currentToken == LOGICAL_AND || currentToken == LOGICAL_OR)){
-        logicalOperator = new ParseNode{Token{TokenType::LOGICAL, "Logical"}};
-        createRelational(Tokens, *logicalOperator, currentIndex);
-        Token operatorToken = Tokens[currentIndex++];
-        logicalOperator->token = operatorToken;
-        if(currentIndex < Tokens.size()-1 && (Tokens[currentIndex+1].type == LOGICAL_AND || Tokens[currentIndex+1].type == LOGICAL_OR)){
-            std::cout<<"WHY is LOGICAL HERE"<<std::endl;
-            createLogical(Tokens, *logicalOperator, currentIndex);
-        }else{
-            std::cout<<"WHY is RELATIONAL HERE"<<std::endl;
-            createRelational(Tokens, *logicalOperator, currentIndex);
-        }
-        currentToken = Tokens[currentIndex].type;
+internal ParseNode* createExpression(int minPrec, std::vector<Token> &Tokens, int &index){
+    ParseNode *first = new ParseNode{Tokens[index]};
+    std::cout<<"not while "<<index<<std::endl;
+    index++;
+    ParseNode *left = first;
+
+    while(getPrecedence(Tokens[index].type)>minPrec){
+        ParseNode *next = new ParseNode{Tokens[index]};
+        std::cout<<"in while "<<index<<std::endl;
+        index++;
+        left = leftDenotation(left, next, Tokens, index);
     }
-    /*
-    ParseNode *logicalOperator = new ParseNode{Token{TokenType::LOGICAL, "Logical"}};
-    createRelational(Tokens, *logicalOperator, currentIndex);
-    TokenType currentToken = Tokens[currentIndex].type;
-    if(currentIndex < Tokens.size() && (currentToken == LOGICAL_AND || currentToken == LOGICAL_OR)){
-        Token operatorToken = Tokens[currentIndex++];
-        logicalOperator->token = operatorToken;
-        currentIndex--;
-        std::cout<<"This is the current index: "<<currentIndex<<std::endl;
-        if(currentIndex < Tokens.size()-1 && (Tokens[currentIndex+1].type == LOGICAL_AND || Tokens[currentIndex+1].type == LOGICAL_OR)){
-            std::cout<<"WHY is LOGICAL HERE"<<std::endl;
-            createLogical(Tokens, *logicalOperator, currentIndex);
-            currentIndex++;
-        }
-        if(currentIndex<Tokens.size()-1 && (Tokens[currentIndex+1].type != LOGICAL_AND && Tokens[currentIndex+1].type != LOGICAL_OR)){
-            std::cout<<"WHY is RELATIONAL HERE"<<std::endl;
-            createRelational(Tokens, *logicalOperator, currentIndex);
-        }
-    }
-        */
-    /*
-    while(currentIndex < Tokens.size() && (currentToken == LOGICAL_AND || currentToken == LOGICAL_OR)){
-        std::cout<<"WHY AM I HERE"<<std::endl;
-        std::cout<<logicalOperator->token.value<<std::endl;
-        std::cout<<currentIndex<<std::endl;
-        Token operatorToken = Tokens[currentIndex];
-        logicalOperator->token = operatorToken;
-        if(currentIndex < Tokens.size() && (Tokens[currentIndex].type == LOGICAL_AND || Tokens[currentIndex].type == LOGICAL_OR)){
-            std::cout<<"I AM LOGICALLLLLL"<<std::endl;
-            currentIndex++;
-            createLogical(Tokens, *logicalOperator, currentIndex);
-        }else{
-            std::cout<<"I AM RELATIONALLL"<<std::endl;
-            std::cout<<logicalOperator->token.value<<std::endl;
-            createRelational(Tokens, *logicalOperator, currentIndex);
-        }
-        //std::cout<<currentIndex<<std::endl;
-        //std::cout<<currentIndex<<std::endl;
-        //std::cout<<currentIndex<<std::endl;
-        //std::cout<<currentIndex<<std::endl;
-        currentToken = Tokens[currentIndex].type;
-    }
-        */
-    Node.children.push_back(logicalOperator);
-    //std::cout<<logicalOperator->token.value<<std::endl;
+    return left;
 }
+
+
 
 internal void createReturnStatement(std::vector<Token> &Tokens, ParseNode &Node, int &currentIndex){
     ParseNode *returnStatement = new ParseNode{Tokens[currentIndex]};
     std::cout<<returnStatement->token.value<<std::endl;
     currentIndex++;
-    createLogical(Tokens, *returnStatement, currentIndex);
+    returnStatement->children.push_back(createExpression(0, Tokens, currentIndex));
     std::cout<<"excuse me why"<<std::endl;
     createSemicolon(Tokens, *returnStatement, currentIndex);
     Node.children.push_back(returnStatement);
@@ -406,7 +356,7 @@ internal void createIfStatement(std::vector<Token> &Tokens, ParseNode &Node, int
     currentIndex++;
     if(Tokens[currentIndex].type == OPEN_PAREN){
         currentIndex++;
-        createRelational(Tokens, *ifStatement, currentIndex);
+        ifStatement->children.push_back(createExpression(0, Tokens, currentIndex));
         if(Tokens[currentIndex].type == CLOSE_PAREN){
             createBlock(Tokens, *ifStatement, currentIndex);
             Node.children.push_back(ifStatement);
@@ -501,8 +451,9 @@ int main(int argc, char* argv[]){
     for(int i = 0; i<Tokens.size();i++){
         std::cout<<Tokens[i].value<<std::endl;
     }
-    ParseNode* parseTree = new ParseNode{Token{TokenType::TREE, "Tree"}};
     int currentIndex = 0;
+    
+    ParseNode* parseTree = new ParseNode{Token{TokenType::TREE, "Tree"}};
     createTree(Tokens, parseTree, currentIndex);
 
     std::cout<<"\n\n\n"<<std::endl;
