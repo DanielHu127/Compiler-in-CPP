@@ -30,6 +30,9 @@
  - Casts: (int), (double), (string), (char)
 */
 
+
+
+
 #include <fstream>
 #include <sstream>
 #include <iostream>
@@ -51,13 +54,29 @@ enum TokenType{
     OPEN_PAREN,
     CLOSE_PAREN,
     INT_DECL,
+    STRING_DECL,
+    FLOAT_DECL,
+    DOUBLE_DECL,
+    BOOL_DECL,
     INT_LIT,
     BOOL_LIT,
-    ASSIGN,
     IF,
     ELSE,
     FOR,
     WHILE,
+
+    ASSIGN,
+    ADD_ASSIGN,
+    SUB_ASSIGN,
+    MUL_ASSIGN,
+    DIV_ASSIGN,
+    MOD_ASSIGN,
+    EXP_ASSIGN,
+    LSHF_ASSIGN,
+    RSHF_ASSIGN,
+    BAND_ASSIGN,
+    BXOR_ASSIGN,
+    BOR_ASSIGN,
 
     LOGICAL_OR,
     LOGICAL_AND,
@@ -88,12 +107,6 @@ enum TokenType{
     BLOCK,
     PARENTHESES,
     STATEMENTLIST,
-    EXPRESSION,
-    TERM,
-    FACTOR,
-    CONDITION,
-    RELATIONAL,
-    LOGICAL,
 };
 
 struct Token{
@@ -145,6 +158,8 @@ std::vector<Token> getTokens(std::ifstream &file){
                 Tokens.push_back(Token{TokenType::FOR, "for"});
             }else if(buffer.str()=="int"){
                 Tokens.push_back(Token{TokenType::INT_DECL, "int"});
+            }else if(buffer.str()=="bool"){
+                Tokens.push_back(Token{TokenType::BOOL_DECL, "bool"});
             }else if(buffer.str()=="true"){
                 Tokens.push_back(Token{TokenType::BOOL_LIT, "true"});
             }else if(buffer.str()=="false"){
@@ -185,30 +200,45 @@ std::vector<Token> getTokens(std::ifstream &file){
             }else if(ch==')'){
                 Tokens.push_back(Token{TokenType::CLOSE_PAREN, ")"});
             }else if(ch=='^' && file.peek()== '^'){
-                Tokens.push_back(Token{TokenType::EXPONENT, "^^"});
                 file.get(ch);
-            }else if(ch=='*'){
+                if(file.peek()=='='){
+                    Tokens.push_back(Token{TokenType::EXP_ASSIGN, "^^="});
+                    file.get(ch);
+                }else{
+                    Tokens.push_back(Token{TokenType::EXPONENT, "^^"});
+                }
+            }else if(ch=='*' && file.peek()!='='){
                 Tokens.push_back(Token{TokenType::MULTIPLY, "*"});
-            }else if(ch=='/'){
+            }else if(ch=='/' && file.peek()!='='){
                 Tokens.push_back(Token{TokenType::DIVIDE, "/"});
-            }else if(ch=='%'){
+            }else if(ch=='%' && file.peek()!='='){
                 Tokens.push_back(Token{TokenType::MOD, "%"});
-            }else if(ch=='+'){
+            }else if(ch=='+' && file.peek()!='='){
                 Tokens.push_back(Token{TokenType::ADD, "+"});
-            }else if(ch=='-'){
+            }else if(ch=='-' && file.peek()!='='){
                 Tokens.push_back(Token{TokenType::SUB, "-"});
             }else if(ch=='<' && file.peek()=='<'){
-                Tokens.push_back(Token{TokenType::L_SHIFT, "<<"});
                 file.get(ch);
+                if(file.peek()=='='){
+                    Tokens.push_back(Token{TokenType::LSHF_ASSIGN, "<<="});
+                    file.get(ch);
+                }else{
+                    Tokens.push_back(Token{TokenType::L_SHIFT, "<<"});
+                }
             }else if(ch=='>' && file.peek()=='>'){
-                Tokens.push_back(Token{TokenType::R_SHIFT, ">>"});
                 file.get(ch);
+                if(file.peek()=='='){
+                    Tokens.push_back(Token{TokenType::RSHF_ASSIGN, ">>="});
+                    file.get(ch);
+                }else{
+                    Tokens.push_back(Token{TokenType::R_SHIFT, ">>"});
+                }
             }else if(ch=='>' && file.peek()!='='){
                 Tokens.push_back(Token{TokenType::GREATER, ">"});
             }else if(ch=='>' && file.peek()=='='){
                 Tokens.push_back(Token{TokenType::GREATER_EQUAL, ">="});
                 file.get(ch);
-            }else if(ch=='<' && file.peek()!='='){
+            }else if(ch=='<' && file.peek()!='=' && file.peek()!='#'){
                 Tokens.push_back(Token{TokenType::LESS, "<"});
             }else if(ch=='<' && file.peek()=='='){
                 Tokens.push_back(Token{TokenType::LESS_EQUAL, "<="});
@@ -219,13 +249,13 @@ std::vector<Token> getTokens(std::ifstream &file){
             }else if(ch=='!' && file.peek()=='='){
                 Tokens.push_back(Token{TokenType::NOT_EQUAL, "!="});
                 file.get(ch);
-            }else if(ch=='&' && file.peek()!='&'){
+            }else if(ch=='&' && file.peek()!='&' && file.peek()!='='){
                 Tokens.push_back(Token{TokenType::BIT_AND, "&"});
                 file.get(ch);
-            }else if(ch=='^' && file.peek()!='^'){
+            }else if(ch=='^' && file.peek()!='^' && file.peek()!='='){
                 Tokens.push_back(Token{TokenType::BIT_XOR, "^"});
                 file.get(ch);
-            }else if(ch=='|' && file.peek()!='|'){
+            }else if(ch=='|' && file.peek()!='|' && file.peek()!='='){
                 Tokens.push_back(Token{TokenType::BIT_OR, "|"});
                 file.get(ch);
             }else if(ch=='&' && file.peek()=='&'){
@@ -236,10 +266,39 @@ std::vector<Token> getTokens(std::ifstream &file){
                 file.get(ch);
             }else if(ch=='=' && file.peek()!= '='){
                 Tokens.push_back(Token{TokenType::ASSIGN, "="});
-            }else if(ch=='#'){
+            }else if(ch=='+' && file.peek()== '='){
+                Tokens.push_back(Token{TokenType::ADD_ASSIGN, "+="});
+                file.get(ch);
+            }else if(ch=='-' && file.peek()== '='){
+                Tokens.push_back(Token{TokenType::SUB_ASSIGN, "-="});
+                file.get(ch);
+            }else if(ch=='*' && file.peek()== '='){
+                Tokens.push_back(Token{TokenType::MUL_ASSIGN, "*="});
+                file.get(ch);
+            }else if(ch=='/' && file.peek()== '='){
+                Tokens.push_back(Token{TokenType::DIV_ASSIGN, "/="});
+                file.get(ch);
+            }else if(ch=='%' && file.peek()== '='){
+                Tokens.push_back(Token{TokenType::MOD_ASSIGN, "%="});
+                file.get(ch);
+            }else if(ch=='&' && file.peek()== '='){
+                Tokens.push_back(Token{TokenType::BAND_ASSIGN, "&="});
+                file.get(ch);
+            }else if(ch=='^' && file.peek()== '='){
+                Tokens.push_back(Token{TokenType::BXOR_ASSIGN, "^="});
+                file.get(ch);
+            }else if(ch=='|' && file.peek()== '='){
+                Tokens.push_back(Token{TokenType::BOR_ASSIGN, "|="});
+                file.get(ch);
+            }else if(ch=='#' && file.peek()== '/'){
                 while(file.peek()!='\n'){
                     file.get(ch);
                 }
+            }else if(ch=='<' && file.peek()== '#'){
+                while(ch != '#' || file.peek()!='>'){
+                    file.get(ch);
+                }
+                file.get(ch);
             }else{
                 std::cerr<<"Special Character Error"<<std::endl;
                 exit(EXIT_FAILURE);
@@ -293,10 +352,10 @@ internal int getPrecedence(TokenType t){
     if(t == BIT_OR){precedence = 3;}
     if(t == LOGICAL_AND){precedence = 2;}
     if(t == LOGICAL_OR){precedence = 1;}
-    if(t == IDENT || t == OPEN_PAREN || t == INT_LIT){precedence = 0;}
+    if(t == IDENT || t == OPEN_PAREN || t == INT_LIT || t == BOOL_LIT){precedence = 0;}
     if(t == SEMICOLON || t == CLOSE_BLOCK || t == CLOSE_PAREN){precedence = -1;}
     if (precedence==-1000){
-        std::cerr<<"invalid operator precedence calculation"<<std::endl;
+        std::cerr<<"invalid operator precedence calculation: "<<t<<std::endl;
         exit(EXIT_FAILURE);
     }
     return precedence;
@@ -315,8 +374,10 @@ internal ParseNode* createExpression(int minPrec, std::vector<Token> &Tokens, in
 internal ParseNode* leftDenotation(ParseNode* left, ParseNode* next, std::vector<Token> &Tokens, int &index){
     ParseNode* binaryOp;
     if(getAssociativity(next->token.type)){
+        std::cout<<"Right Associativity "<<index<<std::endl;
         binaryOp = makeBinaryNode(left, next->token, createExpression(getPrecedence(next->token.type), Tokens, index));
     }else{
+        std::cout<<"Left Associativity "<<index<<std::endl;
         binaryOp = makeBinaryNode(left, next->token, createExpression(getPrecedence(next->token.type)-1, Tokens, index));
     }
     return binaryOp;
@@ -328,6 +389,10 @@ internal ParseNode* createExpression(int minPrec, std::vector<Token> &Tokens, in
     index++;
     ParseNode *left = first;
 
+    if(index==19){
+        std::cout<<"18 index value: "<<Tokens[index].value<<std::endl;
+    }
+
     while(getPrecedence(Tokens[index].type)>minPrec){
         ParseNode *next = new ParseNode{Tokens[index]};
         std::cout<<"in while "<<index<<std::endl;
@@ -337,7 +402,29 @@ internal ParseNode* createExpression(int minPrec, std::vector<Token> &Tokens, in
     return left;
 }
 
+internal void createAssign(std::vector<Token> &Tokens, ParseNode &Node, int& currentIndex){
+    ParseNode* assignment = new ParseNode{Tokens[currentIndex]};
+    std::cout<<assignment->token.value<<std::endl;
+    currentIndex++;
+    assignment->children.push_back(createExpression(0, Tokens, currentIndex));
+    Node.children.push_back(assignment);
+    std::cout<<assignment->token.value<<std::endl;
+}
 
+internal void createDeclaration(std::vector<Token> &Tokens, ParseNode &Node, int &currentIndex){
+    ParseNode *declaration = new ParseNode{Tokens[currentIndex]};
+    std::cout<<declaration->token.value<<std::endl;
+    currentIndex++;
+    ParseNode *ident = new ParseNode{Tokens[currentIndex]};
+    currentIndex++;
+    declaration->children.push_back(ident);
+    if(Tokens[currentIndex].type == ASSIGN){
+        createAssign(Tokens, *ident, currentIndex);
+    }
+    createSemicolon(Tokens, *ident, currentIndex);
+    Node.children.push_back(declaration);
+    std::cout<<declaration->token.value<<std::endl;
+}
 
 internal void createReturnStatement(std::vector<Token> &Tokens, ParseNode &Node, int &currentIndex){
     ParseNode *returnStatement = new ParseNode{Tokens[currentIndex]};
@@ -358,6 +445,7 @@ internal void createIfStatement(std::vector<Token> &Tokens, ParseNode &Node, int
         currentIndex++;
         ifStatement->children.push_back(createExpression(0, Tokens, currentIndex));
         if(Tokens[currentIndex].type == CLOSE_PAREN){
+            currentIndex++;
             createBlock(Tokens, *ifStatement, currentIndex);
             Node.children.push_back(ifStatement);
         }else{
@@ -368,6 +456,10 @@ internal void createIfStatement(std::vector<Token> &Tokens, ParseNode &Node, int
         std::cerr<<"If statement doesn't have ()"<<std::endl;
         exit(EXIT_FAILURE);
     }
+}
+
+internal bool isDeclaration(TokenType t){
+    return(t == INT_DECL || t == BOOL_DECL || t == STRING_DECL || t == FLOAT_DECL || t == DOUBLE_DECL);
 }
 
 internal void createStatementList(std::vector<Token> &Tokens, ParseNode &Node, int &currentIndex){
@@ -381,6 +473,8 @@ internal void createStatementList(std::vector<Token> &Tokens, ParseNode &Node, i
             createIfStatement(Tokens, *statementList, currentIndex);
         }else if(currentToken == TokenType::OPEN_BLOCK){
             createBlock(Tokens, *statementList, currentIndex);
+        }else if(isDeclaration(currentToken)){
+            createDeclaration(Tokens, *statementList, currentIndex);
         }else if(currentToken == TokenType::CLOSE_BLOCK){
             break;
         }else{
@@ -407,6 +501,8 @@ internal void createTree(std::vector<Token> &Tokens, ParseNode *tree, int &curre
     while(currentIndex<Tokens.size()){
         if(Tokens[currentIndex].type == TokenType::OPEN_BLOCK){
             createBlock(Tokens, *tree, currentIndex);
+            std::cout<<tree->token.value<<std::endl;
+            std::cout<<tree->children[0]->token.value<<std::endl;
             std::cout<<tree->children[0]->token.value<<std::endl;
         }
         else if(Tokens[currentIndex].type == TokenType::RETURN){
