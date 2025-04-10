@@ -3,34 +3,33 @@
 
 //THINGS TO ADD:
 /*
- - Keywords: int, float, return, if, else, for, while, switch, class, public, private, virtual, namespace, constexpr, template
- - Operator Precedence: Unary, Multiplicative, Additive, Shift, Relational, Equality, Bitwise AND, Bitwise OR,
+  
+ - Keywords: int, float, return, if, else, for, while, switch, struct, class, public, private, virtual, namespace, constexpr, template
+ + Operator Precedence: Unary, Multiplicative, Additive, Shift, Relational, Equality, Bitwise AND, Bitwise OR,
                         Logical AND, Logical OR, Conditional (prob not), Assignment, Comma
  - Unary Operations (Operations that come before the term): +, -, !, ~, *, & 
- - Exponent Operations: ^^
+ + Exponent Operations: ^^
  + Multiplicative Operations: *, /, %
  + Additive Operations: +, - 
- - Shift Operations: <<, >>
+ + Shift Operations: <<, >>
  + Relational: <, <=, >, >=
  + Equality: ==, !=
- - Bitwise AND: &
- - Bitwise XOR: ^
- - Bitwise OR: |
+ + Bitwise AND: &
+ + Bitwise XOR: ^
+ + Bitwise OR: |
  + Logical AND: &&
  + Logical OR: ||
  - Conditional (prob not): ?: 
- - Assignment: =, +=, -=, *=, /=, %=, <<=, >>=, &=, ^=, |=
+ + Assignment: =, +=, -=, *=, /=, %=, <<=, >>=, &=, ^=, |=
  - Comma: ,
  - Variables and Identifiers
  - Control Flow statements: If, else, for, while
  - Delimiters: ( ) { } [ ] ; ,
  - Punctuation: :: . -> ... 
  - Preprocesser: #include, #define, #ifdef, #pragma
- - Comments: // /*
+ + Comments: # <#
  - Casts: (int), (double), (string), (char)
 */
-
-
 
 
 #include <fstream>
@@ -53,7 +52,16 @@ enum TokenType{
     CLOSE_BLOCK,
     OPEN_PAREN,
     CLOSE_PAREN,
-    INT_DECL,
+
+    U_INT8_DECL,
+    U_INT16_DECL,
+    U_INT32_DECL,
+    U_INT64_DECL,
+    S_INT8_DECL,
+    S_INT16_DECL,
+    S_INT32_DECL,
+    S_INT64_DECL,
+    
     STRING_DECL,
     FLOAT_DECL,
     DOUBLE_DECL,
@@ -64,6 +72,7 @@ enum TokenType{
     ELSE,
     FOR,
     WHILE,
+    COMMA,
 
     ASSIGN,
     ADD_ASSIGN,
@@ -156,8 +165,22 @@ std::vector<Token> getTokens(std::ifstream &file){
                 Tokens.push_back(Token{TokenType::ELSE, "else"});
             }else if(buffer.str()=="for"){
                 Tokens.push_back(Token{TokenType::FOR, "for"});
-            }else if(buffer.str()=="int"){
-                Tokens.push_back(Token{TokenType::INT_DECL, "int"});
+            }else if(buffer.str()=="uint8"){
+                Tokens.push_back(Token{TokenType::U_INT8_DECL, "uint8"});
+            }else if(buffer.str()=="uint16"){
+                Tokens.push_back(Token{TokenType::U_INT16_DECL, "uint16"});
+            }else if(buffer.str()=="uint32"){
+                Tokens.push_back(Token{TokenType::U_INT32_DECL, "uint32"});
+            }else if(buffer.str()=="uint64"){
+                Tokens.push_back(Token{TokenType::U_INT64_DECL, "uint64"});
+            }else if(buffer.str()=="int8"){
+                Tokens.push_back(Token{TokenType::S_INT8_DECL, "int8"});
+            }else if(buffer.str()=="int16"){
+                Tokens.push_back(Token{TokenType::S_INT16_DECL, "int16"});
+            }else if(buffer.str()=="int32"){
+                Tokens.push_back(Token{TokenType::S_INT32_DECL, "int32"});
+            }else if(buffer.str()=="int64"){
+                Tokens.push_back(Token{TokenType::S_INT64_DECL, "int64"});
             }else if(buffer.str()=="bool"){
                 Tokens.push_back(Token{TokenType::BOOL_DECL, "bool"});
             }else if(buffer.str()=="true"){
@@ -290,6 +313,8 @@ std::vector<Token> getTokens(std::ifstream &file){
             }else if(ch=='|' && file.peek()== '='){
                 Tokens.push_back(Token{TokenType::BOR_ASSIGN, "|="});
                 file.get(ch);
+            }else if(ch==','){
+                Tokens.push_back(Token{TokenType::COMMA, ","});
             }else if(ch=='#' && file.peek()== '/'){
                 while(file.peek()!='\n'){
                     file.get(ch);
@@ -411,6 +436,13 @@ internal void createAssign(std::vector<Token> &Tokens, ParseNode &Node, int& cur
     std::cout<<assignment->token.value<<std::endl;
 }
 
+internal bool isAssignment(TokenType t){
+    return( t == ASSIGN || t == ADD_ASSIGN || t == SUB_ASSIGN || 
+            t == MUL_ASSIGN || t == DIV_ASSIGN || t == MOD_ASSIGN || 
+            t == EXP_ASSIGN || t == LSHF_ASSIGN || t == RSHF_ASSIGN || 
+            t == BAND_ASSIGN || t == BXOR_ASSIGN || BOR_ASSIGN);
+}
+
 internal void createDeclaration(std::vector<Token> &Tokens, ParseNode &Node, int &currentIndex){
     ParseNode *declaration = new ParseNode{Tokens[currentIndex]};
     std::cout<<declaration->token.value<<std::endl;
@@ -418,7 +450,7 @@ internal void createDeclaration(std::vector<Token> &Tokens, ParseNode &Node, int
     ParseNode *ident = new ParseNode{Tokens[currentIndex]};
     currentIndex++;
     declaration->children.push_back(ident);
-    if(Tokens[currentIndex].type == ASSIGN){
+    if(isAssignment(Tokens[currentIndex].type)){
         createAssign(Tokens, *ident, currentIndex);
     }
     createSemicolon(Tokens, *ident, currentIndex);
@@ -459,7 +491,9 @@ internal void createIfStatement(std::vector<Token> &Tokens, ParseNode &Node, int
 }
 
 internal bool isDeclaration(TokenType t){
-    return(t == INT_DECL || t == BOOL_DECL || t == STRING_DECL || t == FLOAT_DECL || t == DOUBLE_DECL);
+    return( t == U_INT8_DECL || t == U_INT16_DECL || t == U_INT32_DECL || t == U_INT64_DECL || 
+            t == S_INT8_DECL || t == S_INT16_DECL || t == S_INT32_DECL || t == S_INT64_DECL ||
+            t == BOOL_DECL || t == STRING_DECL || t == FLOAT_DECL || t == DOUBLE_DECL);
 }
 
 internal void createStatementList(std::vector<Token> &Tokens, ParseNode &Node, int &currentIndex){
