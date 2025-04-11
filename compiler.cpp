@@ -21,8 +21,8 @@
  + Logical OR: ||
  - Conditional (prob not): ?: 
  + Assignment: =, +=, -=, *=, /=, %=, <<=, >>=, &=, ^=, |=
- - Comma: ,
- - Variables and Identifiers
+ + Comma: ,
+ + Variables and Identifiers
  - Control Flow statements: If, else, for, while
  - Delimiters: ( ) { } [ ] ; ,
  - Punctuation: :: . -> ... 
@@ -463,7 +463,7 @@ internal void createFunctionUsage(std::vector<Token>& Tokens, ParseNode& Node, i
             exit(EXIT_FAILURE);
         }
         ParseNode* parameter = new ParseNode{ Tokens[currentIndex] };
-        Node->children.push_back(parameter);
+        Node.children.push_back(parameter);
         currentIndex++;
         if (Tokens[currentIndex].type == COMMA) {
             currentIndex++;
@@ -487,7 +487,7 @@ internal void createFunctionDeclaration(std::vector<Token>& Tokens, ParseNode& N
         }
         ParseNode* parameter = new ParseNode{ Tokens[currentIndex] };
         parameterTyping->children.push_back(parameter);
-        Node->children.push_back(parameterTyping);
+        Node.children.push_back(parameterTyping);
         currentIndex++;
         if (Tokens[currentIndex].type == COMMA) {
             currentIndex++;
@@ -502,15 +502,15 @@ internal void createFunction(std::vector<Token> &Tokens, ParseNode &Node, int &c
 
     if (isDeclaration(Tokens[currentIndex].type)) {
         createFunctionDeclaration(Tokens, *functionParameters, currentIndex);
-        Node->children.push_back(functionParameters);
+        Node.children.push_back(functionParameters);
         if (Tokens[currentIndex].type == OPEN_BLOCK) {
             ParseNode* functionBlock = new ParseNode{ Tokens[currentIndex] };
-            Node->children.push_back(functionBlock);
+            Node.children.push_back(functionBlock);
         }
     }
     else if (Tokens[currentIndex].type == IDENT) {
         createFunctionUsage(Tokens, *functionParameters, currentIndex);
-        Node->children.push_back(functionParameters);
+        Node.children.push_back(functionParameters);
     }
 }
 
@@ -543,6 +543,68 @@ internal void createReturnStatement(std::vector<Token> &Tokens, ParseNode &Node,
     std::cout<<returnStatement->token.value<<std::endl;
 }
 
+internal void createWhileStatement(std::vector<Token>& Tokens, ParseNode& Node, int& currentIndex) {
+    ParseNode* whileStatement = new ParseNode{ Tokens[currentIndex] };
+    currentIndex++;
+    createExpression(Tokens, *whileStatement, currentIndex);
+    if (Tokens[currentIndex].type == OPEN_BLOCK) {
+
+    }
+}
+
+internal void createForParameters(std::vector<Token>& Tokens, ParseNode& Node, int& currentIndex) {
+    ParseNode* forParameters = new ParseNode{ Tokens[currentIndex] };
+    currentIndex++;
+    if (!isDeclaration(Tokens[currentIndex].type)) {
+        createDeclaration(Tokens, *forParameters, currentIndex);
+    }
+    createExpression(Tokens, *forParameters, currentIndex);
+    if (Tokens[currentIndex].type != SEMICOLON) {
+        std::cerr << "Missing Semicolon within For loop" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    createSemicolon(Tokens, forParameters->children[1], currentIndex);
+
+    if (Tokens[currentIndex].type != IDENT) {
+        std::cerr << "Missing Identifier in For Loop assignment" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    ParseNode* identifierAssignment = new ParseNode{ Tokens[currentIndex] };
+    forParameters->children.push_back(identifierAssignment);
+    currentIndex++;
+    createAssign(Tokens, *forParameters, currentIndex);
+    Node.children.push_back(forParameters);
+}
+
+internal void createForStatement(std::vector<Token>& Tokens, ParseNode& Node, int& currentIndex) {
+    ParseNode* forStatement = new ParseNode{ Tokens[currentIndex] };
+    currentIndex++;
+    if (!Tokens[currentIndex].type == OPEN_PAREN) {
+        std::cerr << "No Parentheses for For Loop Statement" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    createForParameters(Tokens, *forStatement, currentIndex);
+    if (!Tokens[currentIndex].type == OPEN_BLOCK) {
+        std::cerr << "No Block Code after For Loop Statement" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    createBlock(Tokens, *forStatement, currentIndex);
+    Node.children.push_back(forStatement);
+}
+
+internal void createElseStatement(std::vector<Token>& Tokens, ParseNode& Node, int& currentIndex) {
+    ParseNode* elseStatement = new ParseNode{ Tokens[currentIndex] };
+    currentIndex++;
+
+    if (Tokens[currentIndex].type == IF) {
+        createIfStatement(Tokens, *elseStatement, currentIndex);
+    }
+    else if (Tokens[currentIndex].type == OPEN_BLOCK) {
+        createBlock(Tokens, *elseStatement, currentIndex);
+    }
+    Node.children.push_back(elseStatement);
+}
+
 internal void createIfStatement(std::vector<Token> &Tokens, ParseNode &Node, int &currentIndex){
     ParseNode *ifStatement = new ParseNode{Tokens[currentIndex]};
     std::cout<<ifStatement->token.value<<std::endl;
@@ -550,17 +612,19 @@ internal void createIfStatement(std::vector<Token> &Tokens, ParseNode &Node, int
     if(Tokens[currentIndex].type == OPEN_PAREN){
         currentIndex++;
         ifStatement->children.push_back(createExpression(0, Tokens, currentIndex));
-        if(Tokens[currentIndex].type == CLOSE_PAREN){
-            currentIndex++;
-            createBlock(Tokens, *ifStatement, currentIndex);
-            Node.children.push_back(ifStatement);
-        }else{
-            std::cerr<<"Mismatched () in ifStatement"<<std::endl;
-            exit(EXIT_FAILURE);
-        }
     }else{
         std::cerr<<"If statement doesn't have ()"<<std::endl;
         exit(EXIT_FAILURE);
+    }
+    if (Tokens[currentIndex].type == CLOSE_PAREN) {
+        currentIndex++;
+        createBlock(Tokens, *ifStatement, currentIndex);
+    }else{
+        std::cerr << "Mismatched () in ifStatement" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    if (Tokens[currentIndex].type == ELSE) {
+        createElseStatement(Tokens, *ifStatement, currentIndex);
     }
 }
 
@@ -577,6 +641,10 @@ internal void createStatementList(std::vector<Token> &Tokens, ParseNode &Node, i
             createBlock(Tokens, *statementList, currentIndex);
         }else if(isDeclaration(currentToken)){
             createDeclaration(Tokens, *statementList, currentIndex);
+        }else if (currentToken == FOR) {
+            createForStatement(Tokens, *statementList, currentIndex);
+        }else if (currentToken == WHILE) {
+            createWhileStatement(Tokens, *statementList, currentIndex);
         }else if(currentToken == TokenType::CLOSE_BLOCK){
             break;
         }else{
