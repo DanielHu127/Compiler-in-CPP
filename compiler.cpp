@@ -68,6 +68,9 @@ enum TokenType{
     BOOL_DECL,
     INT_LIT,
     BOOL_LIT,
+    STRING_LIT,
+    DOUBLE_LIT,
+    FLOAT_LIT,
     IF,
     ELSE,
     FOR,
@@ -443,6 +446,74 @@ internal bool isAssignment(TokenType t){
             t == BAND_ASSIGN || t == BXOR_ASSIGN || BOR_ASSIGN);
 }
 
+internal bool isValue(TokenType t) {
+    return(t == IDENT || t == INT_LIT || t == BOOL_LIT || t == DOUBLE_LIT || t == FLOAT_LIT || t == STRING_LIT);
+}
+
+internal bool isDeclaration(TokenType t) {
+    return(t == U_INT8_DECL || t == U_INT16_DECL || t == U_INT32_DECL || t == U_INT64_DECL ||
+        t == S_INT8_DECL || t == S_INT16_DECL || t == S_INT32_DECL || t == S_INT64_DECL ||
+        t == BOOL_DECL || t == STRING_DECL || t == FLOAT_DECL || t == DOUBLE_DECL);
+}
+
+internal void createFunctionUsage(std::vector<Token>& Tokens, ParseNode& Node, int& currentIndex) {
+    while (Tokens[currentIndex].type != CLOSE_PAREN) {
+        if (!isValue(Tokens[currentIndex].type)) {
+            std::cerr << "Incorrect value within FunctionUsage parameter" << std::endl;
+            exit(EXIT_FAILURE);
+        }
+        ParseNode* parameter = new ParseNode{ Tokens[currentIndex] };
+        Node->children.push_back(parameter);
+        currentIndex++;
+        if (Tokens[currentIndex].type == COMMA) {
+            currentIndex++;
+        }
+    }
+    currentIndex++;
+}
+
+internal void createFunctionDeclaration(std::vector<Token>& Tokens, ParseNode& Node, int& currentIndex) {
+    while (Tokens[currentIndex].type != CLOSE_PAREN) {
+        if (!isDeclaration(Tokens[currentIndex].type)) {
+            std::cerr << "Incorrect Typing within FunctionDeclaration parameter" << std::endl;
+            exit(EXIT_FAILURE);
+        }
+
+        ParseNode* parameterTyping = new ParseNode{ Tokens[currentIndex] };
+        currentIndex++;
+        if (!isValue(Tokens[currentIndex].type)) {
+            std::cerr << "Incorrect value within FunctionUsage parameter" << std::endl;
+            exit(EXIT_FAILURE);
+        }
+        ParseNode* parameter = new ParseNode{ Tokens[currentIndex] };
+        parameterTyping->children.push_back(parameter);
+        Node->children.push_back(parameterTyping);
+        currentIndex++;
+        if (Tokens[currentIndex].type == COMMA) {
+            currentIndex++;
+        }
+    }
+    currentIndex++;
+}
+
+internal void createFunction(std::vector<Token> &Tokens, ParseNode &Node, int &currentIndex) {
+    ParseNode* functionParameters = new ParseNode{ Tokens[currentIndex] };
+    currentIndex++;
+
+    if (isDeclaration(Tokens[currentIndex].type)) {
+        createFunctionDeclaration(Tokens, *functionParameters, currentIndex);
+        Node->children.push_back(functionParameters);
+        if (Tokens[currentIndex].type == OPEN_BLOCK) {
+            ParseNode* functionBlock = new ParseNode{ Tokens[currentIndex] };
+            Node->children.push_back(functionBlock);
+        }
+    }
+    else if (Tokens[currentIndex].type == IDENT) {
+        createFunctionUsage(Tokens, *functionParameters, currentIndex);
+        Node->children.push_back(functionParameters);
+    }
+}
+
 internal void createDeclaration(std::vector<Token> &Tokens, ParseNode &Node, int &currentIndex){
     ParseNode *declaration = new ParseNode{Tokens[currentIndex]};
     std::cout<<declaration->token.value<<std::endl;
@@ -452,6 +523,9 @@ internal void createDeclaration(std::vector<Token> &Tokens, ParseNode &Node, int
     declaration->children.push_back(ident);
     if(isAssignment(Tokens[currentIndex].type)){
         createAssign(Tokens, *ident, currentIndex);
+    }
+    else if (Tokens[currentIndex].type == OPEN_PAREN) {
+        createFunction(Tokens, *ident, currentIndex);
     }
     createSemicolon(Tokens, *ident, currentIndex);
     Node.children.push_back(declaration);
@@ -488,12 +562,6 @@ internal void createIfStatement(std::vector<Token> &Tokens, ParseNode &Node, int
         std::cerr<<"If statement doesn't have ()"<<std::endl;
         exit(EXIT_FAILURE);
     }
-}
-
-internal bool isDeclaration(TokenType t){
-    return( t == U_INT8_DECL || t == U_INT16_DECL || t == U_INT32_DECL || t == U_INT64_DECL || 
-            t == S_INT8_DECL || t == S_INT16_DECL || t == S_INT32_DECL || t == S_INT64_DECL ||
-            t == BOOL_DECL || t == STRING_DECL || t == FLOAT_DECL || t == DOUBLE_DECL);
 }
 
 internal void createStatementList(std::vector<Token> &Tokens, ParseNode &Node, int &currentIndex){
