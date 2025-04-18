@@ -26,6 +26,7 @@
  - Control Flow statements: If, else, for, while
  - Delimiters: ( ) { } [ ] ; ,
  - Punctuation: :: . -> ... 
+ + Functions: Declarations and Usage
  - Preprocesser: #include, #define, #ifdef, #pragma
  + Comments: # <#
  - Casts: (int), (double), (string), (char)
@@ -44,6 +45,12 @@
 #define internal static
 #define global static
 #define local_persist static
+#define DEBUG 1
+#if DEBUG
+#define LOG(x) std::cout<<x<<std::endl
+#else
+#define LOG(x) 
+#endif
 
 enum TokenType{
     RETURN,
@@ -134,13 +141,14 @@ struct ParseNode{
 std::vector<std::string> identifiers = {};
 
 internal void createBlock(std::vector<Token> &Tokens, ParseNode &Node, int &currentIndex);
+internal void createIfStatement(std::vector<Token> &Tokens, ParseNode &Node, int &currentIndex);
 
 internal void consumeTokens(std::vector<Token> &Tokens, int left, int right){
     for(int i = right; i>=left;i--){
         if (i >= 0 && i < Tokens.size()) {
             Tokens.erase(Tokens.begin() + i);
         } else {
-            std::cout << "Index out of bounds" << std::endl;
+            LOG("Index out of bounds");
         }
     }
 }
@@ -341,21 +349,21 @@ std::vector<Token> getTokens(std::ifstream &file){
 internal void readFile(std::ifstream &file){
     std::string line;
     while(std::getline(file,line)){
-        std::cout<<line<<std::endl;
+        LOG(line);
     }
 }
 
 internal void createSemicolon(std::vector<Token> &Tokens, ParseNode &Node, int &currentIndex){
-    std::cout<<currentIndex<<std::endl;
+    LOG(currentIndex);
     if(Tokens[currentIndex].type==TokenType::SEMICOLON){
         ParseNode * semicolon = new ParseNode{Tokens[currentIndex++]};
-        std::cout<<semicolon->token.value<<std::endl;
+        LOG(semicolon->token.value);
         Node.children.push_back(semicolon);
     }else{
         std::cerr<<"No semicolon found"<<std::endl;
         exit(EXIT_FAILURE);
     }
-    std::cout<<"Semicolon"<<std::endl;
+    LOG("Semicolon");
 }
 
 //true is left->right, false is right->left
@@ -393,7 +401,7 @@ internal ParseNode* makeBinaryNode(ParseNode* left, Token oper, ParseNode* right
     ParseNode * binaryNode = new ParseNode{oper, {}};
     binaryNode->children.push_back(left);
     binaryNode->children.push_back(right);
-    //std::cout<<binaryNode.token.value<<std::endl<<std::endl; 
+    //LOG(binaryNode.token.value);
     return binaryNode;
 }
 
@@ -402,10 +410,10 @@ internal ParseNode* createExpression(int minPrec, std::vector<Token> &Tokens, in
 internal ParseNode* leftDenotation(ParseNode* left, ParseNode* next, std::vector<Token> &Tokens, int &index){
     ParseNode* binaryOp;
     if(getAssociativity(next->token.type)){
-        std::cout<<"Right Associativity "<<index<<std::endl;
+        LOG("Right Associativity "<<index);
         binaryOp = makeBinaryNode(left, next->token, createExpression(getPrecedence(next->token.type), Tokens, index));
     }else{
-        std::cout<<"Left Associativity "<<index<<std::endl;
+        LOG("Left Associativity "<<index);
         binaryOp = makeBinaryNode(left, next->token, createExpression(getPrecedence(next->token.type)-1, Tokens, index));
     }
     return binaryOp;
@@ -413,17 +421,17 @@ internal ParseNode* leftDenotation(ParseNode* left, ParseNode* next, std::vector
 
 internal ParseNode* createExpression(int minPrec, std::vector<Token> &Tokens, int &index){
     ParseNode *first = new ParseNode{Tokens[index]};
-    std::cout<<"not while "<<index<<std::endl;
+    LOG("not while "<<index);
     index++;
     ParseNode *left = first;
 
-    if(index==19){
-        std::cout<<"18 index value: "<<Tokens[index].value<<std::endl;
+    if(index==24){
+        LOG("23 index value: "<<Tokens[index].value);
     }
 
     while(getPrecedence(Tokens[index].type)>minPrec){
         ParseNode *next = new ParseNode{Tokens[index]};
-        std::cout<<"in while "<<index<<std::endl;
+        LOG("in while "<<index);
         index++;
         left = leftDenotation(left, next, Tokens, index);
     }
@@ -432,18 +440,18 @@ internal ParseNode* createExpression(int minPrec, std::vector<Token> &Tokens, in
 
 internal void createAssign(std::vector<Token> &Tokens, ParseNode &Node, int& currentIndex){
     ParseNode* assignment = new ParseNode{Tokens[currentIndex]};
-    std::cout<<assignment->token.value<<std::endl;
+    LOG(assignment->token.value);
     currentIndex++;
     assignment->children.push_back(createExpression(0, Tokens, currentIndex));
     Node.children.push_back(assignment);
-    std::cout<<assignment->token.value<<std::endl;
+    LOG(assignment->token.value);
 }
 
 internal bool isAssignment(TokenType t){
     return( t == ASSIGN || t == ADD_ASSIGN || t == SUB_ASSIGN || 
             t == MUL_ASSIGN || t == DIV_ASSIGN || t == MOD_ASSIGN || 
             t == EXP_ASSIGN || t == LSHF_ASSIGN || t == RSHF_ASSIGN || 
-            t == BAND_ASSIGN || t == BXOR_ASSIGN || BOR_ASSIGN);
+            t == BAND_ASSIGN || t == BXOR_ASSIGN || t == BOR_ASSIGN);
 }
 
 internal bool isValue(TokenType t) {
@@ -470,6 +478,7 @@ internal void createFunctionUsage(std::vector<Token>& Tokens, ParseNode& Node, i
         }
     }
     currentIndex++;
+    LOG(currentIndex);
 }
 
 internal void createFunctionDeclaration(std::vector<Token>& Tokens, ParseNode& Node, int& currentIndex) {
@@ -485,6 +494,7 @@ internal void createFunctionDeclaration(std::vector<Token>& Tokens, ParseNode& N
             std::cerr << "Incorrect value within FunctionUsage parameter" << std::endl;
             exit(EXIT_FAILURE);
         }
+
         ParseNode* parameter = new ParseNode{ Tokens[currentIndex] };
         parameterTyping->children.push_back(parameter);
         Node.children.push_back(parameterTyping);
@@ -501,14 +511,18 @@ internal void createFunction(std::vector<Token> &Tokens, ParseNode &Node, int &c
     currentIndex++;
 
     if (isDeclaration(Tokens[currentIndex].type)) {
+        LOG("BRUHHHHHHIUDHSFBSDBVSD");
         createFunctionDeclaration(Tokens, *functionParameters, currentIndex);
         Node.children.push_back(functionParameters);
+        LOG(Tokens[currentIndex].value);
         if (Tokens[currentIndex].type == OPEN_BLOCK) {
+            LOG("IUDAHHFOIUDA");
             ParseNode* functionBlock = new ParseNode{ Tokens[currentIndex] };
+            createBlock(Tokens, *functionBlock, currentIndex);
             Node.children.push_back(functionBlock);
         }
     }
-    else if (Tokens[currentIndex].type == IDENT) {
+    else if (isValue(Tokens[currentIndex].type)) {
         createFunctionUsage(Tokens, *functionParameters, currentIndex);
         Node.children.push_back(functionParameters);
     }
@@ -516,39 +530,48 @@ internal void createFunction(std::vector<Token> &Tokens, ParseNode &Node, int &c
 
 internal void createDeclaration(std::vector<Token> &Tokens, ParseNode &Node, int &currentIndex){
     ParseNode *declaration = new ParseNode{Tokens[currentIndex]};
-    std::cout<<declaration->token.value<<std::endl;
+    LOG(declaration->token.value);
     currentIndex++;
     ParseNode *ident = new ParseNode{Tokens[currentIndex]};
     currentIndex++;
     declaration->children.push_back(ident);
     if(isAssignment(Tokens[currentIndex].type)){
+        LOG("ASSIGNMENT");
+        LOG(isAssignment(Tokens[currentIndex].type));
+        LOG(Tokens[currentIndex].type);
+        LOG(currentIndex);
         createAssign(Tokens, *ident, currentIndex);
+        createSemicolon(Tokens, *ident, currentIndex);
+        currentIndex++;
     }
     else if (Tokens[currentIndex].type == OPEN_PAREN) {
         createFunction(Tokens, *ident, currentIndex);
+        if(Tokens[currentIndex].type == CLOSE_PAREN){
+            createSemicolon(Tokens, *ident, currentIndex);
+            currentIndex++;
+        }
     }
-    createSemicolon(Tokens, *ident, currentIndex);
     Node.children.push_back(declaration);
-    std::cout<<declaration->token.value<<std::endl;
+    LOG(declaration->token.value);
 }
 
 internal void createReturnStatement(std::vector<Token> &Tokens, ParseNode &Node, int &currentIndex){
     ParseNode *returnStatement = new ParseNode{Tokens[currentIndex]};
-    std::cout<<returnStatement->token.value<<std::endl;
+    LOG(returnStatement->token.value);
     currentIndex++;
     returnStatement->children.push_back(createExpression(0, Tokens, currentIndex));
-    std::cout<<"excuse me why"<<std::endl;
+    LOG("excuse me why");
     createSemicolon(Tokens, *returnStatement, currentIndex);
     Node.children.push_back(returnStatement);
-    std::cout<<returnStatement->token.value<<std::endl;
+    LOG(returnStatement->token.value);
 }
 
 internal void createWhileStatement(std::vector<Token>& Tokens, ParseNode& Node, int& currentIndex) {
     ParseNode* whileStatement = new ParseNode{ Tokens[currentIndex] };
     currentIndex++;
-    createExpression(Tokens, *whileStatement, currentIndex);
+    whileStatement->children.push_back(createExpression(0, Tokens, currentIndex));
     if (Tokens[currentIndex].type == OPEN_BLOCK) {
-
+        //TO DO LATER
     }
 }
 
@@ -557,13 +580,16 @@ internal void createForParameters(std::vector<Token>& Tokens, ParseNode& Node, i
     currentIndex++;
     if (!isDeclaration(Tokens[currentIndex].type)) {
         createDeclaration(Tokens, *forParameters, currentIndex);
+        LOG("DECLARATION");
     }
-    createExpression(Tokens, *forParameters, currentIndex);
+    forParameters->children.push_back(createExpression(0, Tokens, currentIndex));
+    LOG("EXPRESSION");
     if (Tokens[currentIndex].type != SEMICOLON) {
         std::cerr << "Missing Semicolon within For loop" << std::endl;
         exit(EXIT_FAILURE);
     }
-    createSemicolon(Tokens, forParameters->children[1], currentIndex);
+    createSemicolon(Tokens, *(forParameters->children[1]), currentIndex);
+    LOG("SEMICOLON");
 
     if (Tokens[currentIndex].type != IDENT) {
         std::cerr << "Missing Identifier in For Loop assignment" << std::endl;
@@ -571,8 +597,11 @@ internal void createForParameters(std::vector<Token>& Tokens, ParseNode& Node, i
     }
     ParseNode* identifierAssignment = new ParseNode{ Tokens[currentIndex] };
     forParameters->children.push_back(identifierAssignment);
+    LOG("IDENTIFIER");
     currentIndex++;
     createAssign(Tokens, *forParameters, currentIndex);
+    currentIndex++;
+    LOG("ASSIGNMENT");
     Node.children.push_back(forParameters);
 }
 
@@ -583,12 +612,21 @@ internal void createForStatement(std::vector<Token>& Tokens, ParseNode& Node, in
         std::cerr << "No Parentheses for For Loop Statement" << std::endl;
         exit(EXIT_FAILURE);
     }
+    LOG("HEYY");
     createForParameters(Tokens, *forStatement, currentIndex);
     if (!Tokens[currentIndex].type == OPEN_BLOCK) {
         std::cerr << "No Block Code after For Loop Statement" << std::endl;
         exit(EXIT_FAILURE);
     }
+    LOG("BLOCK TIME");
+    LOG(Tokens[currentIndex].value);
+    LOG(currentIndex);
+    if(!Tokens[currentIndex].type == CLOSE_PAREN){
+        std::cerr << "No Block Code after For Loop Statement" << std::endl;
+        exit(EXIT_FAILURE);
+    }
     createBlock(Tokens, *forStatement, currentIndex);
+    LOG("BLOCK TIME");
     Node.children.push_back(forStatement);
 }
 
@@ -607,7 +645,7 @@ internal void createElseStatement(std::vector<Token>& Tokens, ParseNode& Node, i
 
 internal void createIfStatement(std::vector<Token> &Tokens, ParseNode &Node, int &currentIndex){
     ParseNode *ifStatement = new ParseNode{Tokens[currentIndex]};
-    std::cout<<ifStatement->token.value<<std::endl;
+    LOG(ifStatement->token.value);
     currentIndex++;
     if(Tokens[currentIndex].type == OPEN_PAREN){
         currentIndex++;
@@ -626,11 +664,12 @@ internal void createIfStatement(std::vector<Token> &Tokens, ParseNode &Node, int
     if (Tokens[currentIndex].type == ELSE) {
         createElseStatement(Tokens, *ifStatement, currentIndex);
     }
+    Node.children.push_back(ifStatement);
 }
 
 internal void createStatementList(std::vector<Token> &Tokens, ParseNode &Node, int &currentIndex){
     ParseNode *statementList = new ParseNode{Token{TokenType::STATEMENTLIST, "Statement List"}};
-    std::cout<<statementList->token.value<<std::endl;
+    LOG(statementList->token.value);
     while(Tokens[currentIndex].type!=TokenType::CLOSE_BLOCK){
         TokenType currentToken = Tokens[currentIndex].type;
         if(currentToken == TokenType::RETURN){
@@ -640,40 +679,44 @@ internal void createStatementList(std::vector<Token> &Tokens, ParseNode &Node, i
         }else if(currentToken == TokenType::OPEN_BLOCK){
             createBlock(Tokens, *statementList, currentIndex);
         }else if(isDeclaration(currentToken)){
+            LOG("bruh");
             createDeclaration(Tokens, *statementList, currentIndex);
         }else if (currentToken == FOR) {
             createForStatement(Tokens, *statementList, currentIndex);
+            LOG(Tokens[currentIndex].value);
+            LOG(currentIndex);
         }else if (currentToken == WHILE) {
             createWhileStatement(Tokens, *statementList, currentIndex);
         }else if(currentToken == TokenType::CLOSE_BLOCK){
             break;
         }else{
-            std::cout<<Tokens[currentIndex].value<<std::endl;
+            LOG(Tokens[currentIndex].value);
+            LOG(currentIndex);
             std::cerr<<"Not valid statement"<<std::endl;
             exit(EXIT_FAILURE);
         }
     }
     Node.children.push_back(statementList);
-    std::cout<<statementList->token.value<<std::endl;
+    LOG(statementList->token.value);
 }
 
 internal void createBlock(std::vector<Token> &Tokens, ParseNode &Node, int &currentIndex){
     ParseNode * block = new ParseNode{Token{TokenType::BLOCK, "Block"}};
-    std::cout<<block->token.value<<std::endl;
+    LOG(block->token.value);
     currentIndex++;
     createStatementList(Tokens, *block, currentIndex);
     currentIndex++;
     Node.children.push_back(block);
-    std::cout<<block->token.value<<std::endl;
+    LOG(block->token.value);
 }
 
 internal void createTree(std::vector<Token> &Tokens, ParseNode *tree, int &currentIndex){
     while(currentIndex<Tokens.size()){
         if(Tokens[currentIndex].type == TokenType::OPEN_BLOCK){
             createBlock(Tokens, *tree, currentIndex);
-            std::cout<<tree->token.value<<std::endl;
-            std::cout<<tree->children[0]->token.value<<std::endl;
-            std::cout<<tree->children[0]->token.value<<std::endl;
+            LOG(tree->token.value);
+            LOG(tree->children[0]->token.value);
+            LOG(tree->children[0]->token.value);
         }
         else if(Tokens[currentIndex].type == TokenType::RETURN){
             //NOTE: FIX THIS
@@ -681,7 +724,7 @@ internal void createTree(std::vector<Token> &Tokens, ParseNode *tree, int &curre
             //tree.children.push_back(&returnStatement);
         }
     }
-    std::cout<<tree->token.value<<std::endl;
+    LOG(tree->token.value);
 }
 
 internal void printParseTree(ParseNode *Node, int indent){
@@ -709,20 +752,20 @@ int main(int argc, char* argv[]){
     }
 
 
-    std::cout<<argv[1]<<std::endl;
+    LOG(argv[1]);
 
     std::ifstream file(argv[1]);
 
     std::vector<Token> Tokens = getTokens(file);
     for(int i = 0; i<Tokens.size();i++){
-        std::cout<<Tokens[i].value<<std::endl;
+        LOG(Tokens[i].value);
     }
     int currentIndex = 0;
     
     ParseNode* parseTree = new ParseNode{Token{TokenType::TREE, "Tree"}};
     createTree(Tokens, parseTree, currentIndex);
 
-    std::cout<<"\n\n\n"<<std::endl;
+    LOG("\n\n\n");
     printParseTree(parseTree, 0);
 
     file.close();

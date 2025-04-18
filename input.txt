@@ -10,10 +10,7 @@
 #>
 
 {
-    uint8 x = 40;
-    int8 y = 20;
-    int16 z = x - y;
-    if(z*2>=x+y){
-        return true;
+    int32 foo(int32 x){
+      return 3+4;
     }
 }
