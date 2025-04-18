@@ -1,16 +1,31 @@
-<# *
-  ----1
-  ----*
-  --------2
-  --------*
-  ------------3
-  ------------4
-  1 * 2 + 3 * 4 < 5 * 6 + 7 * 8 && 9 * 10 + 11 * 12 <= 13 * 14 + 15 * 16 || 17 * 18 + 19 * 20 <= 21 * 22 + 23 * 24
-  .\compiler.exe .\input.txt
+<# 
+These are multi-line comments.
+these won't be calculated by the compiler.
+Woohoo.
 #>
 
+# Single line comment
+
 {
-    int32 foo(int32 x){
-      return 3+4;
+  int32 foo(int32 a, int32 b){
+    if(a<b){
+      return a;
+    }else if(a>b){
+      return b;
+    }else{
+      return 0;
     }
+  }
+}
+
+{
+  for(int32 i = 0; i-1<123; i+=1 ){
+    if(i<2){
+      int32 j = 5;
+      while(j>0){
+        j-=1;
+        foo(i , j);
+      }
+    }
+  }
 }
