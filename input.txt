@@ -7,7 +7,5 @@ Woohoo.
 # Single line comment
 
 {
-  string str = "hey";
-  double d = 1.234;
-  float f = 1.234f;
+  return;
 }

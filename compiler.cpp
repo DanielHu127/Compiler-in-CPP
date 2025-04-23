@@ -1,3 +1,10 @@
+//File: final_project.cpp
+//Name: Daniel Hu
+//Date: 04/23/2025
+//Course: CompSci 1
+//Description:  This is a custom parse tree generator.
+//Usage:  This program will ask the user to input code-like syntax into the input file and output parse tree.
+
 // g++ compiler.cpp -o compiler
 // ./compiler.exe ./input.txt
 
@@ -42,6 +49,8 @@
 #define internal static
 #define global static
 #define local_persist static
+//Set Debug to 0 to not see logs
+//Set Debug to 1 to see logs
 #define DEBUG 1
 #if DEBUG
 #define LOG(x) std::cout<<x<<std::endl
@@ -51,6 +60,7 @@
 
 #define ERR(x) std::cerr<<x<<std::endl
 
+//All predefined Token Type variants
 enum TokenType{
     RETURN,
     IDENT,
@@ -124,9 +134,11 @@ enum TokenType{
     //Parse
     BLOCK,
     PARENTHESES,
-    STATEMENTLIST,
+    STATEMENTLIST
 };
 
+//Token Class
+//Stores the TokenType and the value of the token
 class Token{
     public:
     TokenType type;
@@ -146,6 +158,8 @@ class Token{
     bool isDeclaration() const;
 };
 
+// Goes through the entire file and turns streams of characters into predefined tokens. 
+// Returns a vector of all tokens found.
 std::vector<Token> Token::getTokens(std::ifstream &file){
     std::vector<Token> Tokens;
     char ch;
@@ -208,6 +222,7 @@ std::vector<Token> Token::getTokens(std::ifstream &file){
             }
             buffer.str("");
             buffer.clear();
+        // Checks for numerical literals: int, float, double
         }else if(std::isdigit(ch) || ch == '.'){
             while(std::isdigit(file.peek())){
                 file.get(ch);
@@ -233,12 +248,14 @@ std::vector<Token> Token::getTokens(std::ifstream &file){
             }
             buffer.str("");
             buffer.clear();
+        //Gets rid of spaces
         }else if(std::isspace(ch)){
             while(std::isspace(file.peek())){
                 file.get(ch);
             }
             buffer.str("");
             buffer.clear();
+        //Checks for special characters
         }else if(!std::isalnum(ch)){
             file.get(ch);
             if(ch==';'){
@@ -347,10 +364,16 @@ std::vector<Token> Token::getTokens(std::ifstream &file){
             }else if(ch=='#'){
                 while(file.peek()!='\n'){
                     file.get(ch);
+                    if(file.peek()==EOF){
+                        break;
+                    }
                 }
             }else if(ch=='<' && file.peek()== '#'){
                 while(ch != '#' || file.peek()!='>'){
                     file.get(ch);
+                    if(file.peek()==EOF){
+                        break;
+                    }
                 }
                 file.get(ch);
             }else if(ch=='\"'){
@@ -358,13 +381,17 @@ std::vector<Token> Token::getTokens(std::ifstream &file){
                 while(file.peek()!='\"'){
                     file.get(ch);
                     buffer<<ch;
+                    if(file.peek() == EOF){
+                        break;
+                    }
                 }
                 file.get(ch);
                 buffer<<ch;
                 Tokens.push_back(Token{TokenType::STRING_LIT, buffer.str()});
             }else{
                 LOG(ch);
-                std::cerr<<"Special Character Error"<<std::endl;
+                ERR("Special Character Error");
+                ERR("Unknown Character: "<<ch);
                 exit(EXIT_FAILURE);
             }
             buffer.str("");
@@ -374,6 +401,7 @@ std::vector<Token> Token::getTokens(std::ifstream &file){
     return Tokens;
 }
 
+// Returns the precedence of a token. If not a valid token, returns an error.
 int Token::getPrecedence() const{
     int precedence = -1000;
     if(type == EXPONENT){precedence = 11;}
@@ -390,13 +418,14 @@ int Token::getPrecedence() const{
     if(type == IDENT || type == OPEN_PAREN || type == INT_LIT || type == BOOL_LIT || type == STRING_LIT || type == DOUBLE_LIT){precedence = 0; LOG("BOO");}
     if(type == SEMICOLON || type == CLOSE_BLOCK || type == CLOSE_PAREN || type == COMMA){precedence = -1;}
     if (precedence==-1000){
-        std::cerr<<"invalid operator precedence calculation: "<<type<<std::endl;
+        ERR("Invalid operator precedence calculation: "<<value);
         exit(EXIT_FAILURE);
     }
     LOG(type);
     return precedence;
 }
 
+// returns true if token is an assignment operator
 bool Token::isAssignment() const{
     return( type == ASSIGN || type == ADD_ASSIGN || type == SUB_ASSIGN || 
             type == MUL_ASSIGN || type == DIV_ASSIGN || type == MOD_ASSIGN || 
@@ -404,21 +433,28 @@ bool Token::isAssignment() const{
             type == BAND_ASSIGN || type == BXOR_ASSIGN || type == BOR_ASSIGN);
 }
 
+// returns true if token is a value
 bool Token::isValue() const{
     return(type == IDENT || type == INT_LIT || type == BOOL_LIT || type == DOUBLE_LIT || type == FLOAT_LIT || type == STRING_LIT);
 }
 
+// returns true if token is a declaration
 bool Token::isDeclaration() const{
     return(type == U_INT8_DECL || type == U_INT16_DECL || type == U_INT32_DECL || type == U_INT64_DECL ||
         type == S_INT8_DECL || type == S_INT16_DECL || type == S_INT32_DECL || type == S_INT64_DECL ||
         type == BOOL_DECL || type == STRING_DECL || type == FLOAT_DECL || type == DOUBLE_DECL);
 }
 
+//returns the associativity of the token. 
 //true is left->right, false is right->left
 bool Token::getAssociativity() const{
     return type == EXPONENT;
 }
 
+// The ParseNode class
+// Each object stores a token and its corresponding children.
+// Also has static class members current_index and tokens that are referenced everywhere
+// Creates a tree structure
 class ParseNode{
     public:
     Token token;
@@ -456,16 +492,18 @@ class ParseNode{
 
     void createSemicolon();
 
-    static void printParseTree(ParseNode* node, int indent);
+    static void printParseTree(ParseNode* node, std::ofstream &output, int indent);
 
     static ParseNode* makeBinaryNode(ParseNode* left, Token oper, ParseNode* right);
     static ParseNode* createExpression(int minPrec);
     static ParseNode* leftDenotation(ParseNode* left, ParseNode* next);
 };
 
+// Needed for linker to link these static class members correctly.
 int ParseNode::current_index;
 std::vector<Token> ParseNode::tokens;
 
+// Creates the root node of the parse tree
 void ParseNode::createTree(){
     while(current_index<tokens.size()){
         if(tokens[current_index].type == TokenType::OPEN_BLOCK){
@@ -475,12 +513,14 @@ void ParseNode::createTree(){
             LOG(children[0]->token.value);
         }else{
             ERR("No Open Block Found at start of program");
+            ERR("Found this instead: "<<tokens[current_index].value);
             exit(EXIT_FAILURE);
         }
     }
     LOG(token.value);
 }
 
+// creates a block node for the parse tree.
 void ParseNode::createBlock(){
     ParseNode * block = new ParseNode{Token{TokenType::BLOCK, "Block"}};
     LOG(block->token.value);
@@ -491,6 +531,7 @@ void ParseNode::createBlock(){
     LOG(block->token.value);
 }
 
+// creates a list of statements for the parse tree.
 void ParseNode::createStatementList(){
     ParseNode *statementList = new ParseNode{Token{TokenType::STATEMENTLIST, "Statement List"}};
     LOG(statementList->token.value);
@@ -503,12 +544,9 @@ void ParseNode::createStatementList(){
         }else if(currentToken == TokenType::OPEN_BLOCK){
             (*statementList).createBlock();
         }else if(tokens[current_index].isDeclaration()){
-            LOG("bruh");
             (*statementList).createDeclaration();
         }else if (currentToken == FOR) {
             (*statementList).createForStatement();
-            LOG(tokens[current_index].value);
-            LOG(current_index);
         }else if (currentToken == WHILE) {
             (*statementList).createWhileStatement();
         }else if (currentToken == IDENT) {
@@ -516,9 +554,13 @@ void ParseNode::createStatementList(){
         }else if(currentToken == TokenType::CLOSE_BLOCK){
             break;
         }else{
-            LOG(tokens[current_index].value);
-            LOG(current_index);
-            std::cerr<<"Not valid statement"<<std::endl;
+            ERR("Not valid statement");
+            ERR("Found this instead: "<<tokens[current_index].value);
+            exit(EXIT_FAILURE);
+        }
+        if(current_index>=tokens.size()){
+            ERR("Missing Closing Bracket");
+            ERR("Found end of file instead");
             exit(EXIT_FAILURE);
         }
     }
@@ -526,27 +568,43 @@ void ParseNode::createStatementList(){
     LOG(statementList->token.value);
 }
 
+// creates a return statement for the parse tree.
 void ParseNode::createReturnStatement(){
     ParseNode *returnStatement = new ParseNode{tokens[current_index]};
     LOG(returnStatement->token.value);
     current_index++;
-    returnStatement->children.push_back(createExpression(0));
+    if(tokens[current_index].isValue()){
+        returnStatement->children.push_back(createExpression(0));
+    }
+    if(tokens[current_index].type != SEMICOLON){
+        ERR("Missing semicolon for return statement");
+        ERR("Found this instead: "<<tokens[current_index].value);
+        exit(EXIT_FAILURE);
+    }
     (*returnStatement).createSemicolon();
     children.push_back(returnStatement);
     LOG(returnStatement->token.value);
 }
 
+
+// creates a while statement for the parse tree
 void ParseNode::createWhileStatement() {
     ParseNode* whileStatement = new ParseNode{ tokens[current_index] };
     current_index++;
     if(tokens[current_index].type != OPEN_PAREN){
-        std::cerr<<"Missing Open Parentheses in while loop"<<std::endl;
+        ERR("Missing Open Parentheses in while loop");
+        ERR("Found this instead: "<<tokens[current_index].value);
         exit(EXIT_FAILURE);
     }
     current_index++;
+    if(!tokens[current_index].isValue()){
+        ERR("Missing Value within while loop");
+        exit(EXIT_FAILURE);
+    }
     whileStatement->children.push_back(createExpression(0));
     if(tokens[current_index].type != CLOSE_PAREN){
-        std::cerr<<"Missing Close Parentheses in while loop"<<std::endl;
+        ERR("Missing Close Parentheses in while loop");
+        ERR("Found this instead: "<<tokens[current_index].value);
         exit(EXIT_FAILURE);
     }
     current_index++;
@@ -555,87 +613,110 @@ void ParseNode::createWhileStatement() {
     }else if(tokens[current_index].type == SEMICOLON){
         (*whileStatement).createSemicolon();
     }else{
-        std::cerr<<"Incorrect usage of while loop"<<std::endl;
+        ERR("Incorrect usage of while loop");
+        ERR("Found this instead: "<<tokens[current_index].value);
         exit(EXIT_FAILURE);
     }
     children.push_back(whileStatement);
 }
 
+// creates a for loop statement for the parse tree.
 void ParseNode::createForStatement() {
     ParseNode* forStatement = new ParseNode{ tokens[current_index] };
     current_index++;
     if (!tokens[current_index].type == OPEN_PAREN) {
-        std::cerr << "No Parentheses for For Loop Statement" << std::endl;
+        ERR("No Parentheses for For Loop Statement");
+        ERR("Found this instead: "<<tokens[current_index].value);
         exit(EXIT_FAILURE);
     }
-    LOG("HEYY");
+
     (*forStatement).createForParameters();
     if (!tokens[current_index].type == OPEN_BLOCK) {
-        std::cerr << "No Block Code after For Loop Statement" << std::endl;
+        ERR("No Open Bracket after For Loop Statement");
+        ERR("Found this instead: "<<tokens[current_index].value);
         exit(EXIT_FAILURE);
     }
-    LOG("BLOCK TIME");
-    LOG(tokens[current_index].value);
-    LOG(current_index);
-    if(!tokens[current_index].type == CLOSE_PAREN){
-        std::cerr << "No Block Code after For Loop Statement" << std::endl;
+
+    if(!tokens[current_index].type == CLOSE_BLOCK){
+        ERR("No Closing Bracket after For Loop Statement");
+        ERR("Found this instead: "<<tokens[current_index].value);
         exit(EXIT_FAILURE);
     }
     (*forStatement).createBlock();
-    LOG("BLOCK TIME");
+
     children.push_back(forStatement);
 }
 
+// creates the for loop parameters for the parse tree.
 void ParseNode::createForParameters() {
     ParseNode* forParameters = new ParseNode{ tokens[current_index] };
     current_index++;
     if (!tokens[current_index].isDeclaration()) {
-        std::cerr<<"Missing declaration in for loop"<<std::endl;
+        ERR("Missing declaration in for loop");
+        ERR("Found this instead: "<<tokens[current_index].value);
         exit(EXIT_FAILURE);
     }
     (*forParameters).createDeclaration();
     LOG("DECLARATION");
     LOG(tokens[current_index].value);
+    if(!tokens[current_index].isValue()){
+        ERR("Missing Value within for loop declaration parameter");
+        exit(EXIT_FAILURE);
+    }
     forParameters->children.push_back(createExpression(0));
     LOG("EXPRESSION");
     if (tokens[current_index].type != SEMICOLON) {
         LOG(tokens[current_index].value);
-        std::cerr << "Missing Semicolon within For loop" << std::endl;
+        ERR("Missing Semicolon within For loop");
+        ERR("Found this instead: "<<tokens[current_index].value);
         exit(EXIT_FAILURE);
     }
     (*forParameters->children[1]).createSemicolon();
     LOG("SEMICOLON");
 
     if (tokens[current_index].type != IDENT) {
-        std::cerr << "Missing Identifier in For Loop assignment" << std::endl;
+        ERR("Missing Identifier in For Loop assignment");
+        ERR("Found this instead: "<<tokens[current_index].value);
         exit(EXIT_FAILURE);
     }
     ParseNode* identifierAssignment = new ParseNode{ tokens[current_index] };
     forParameters->children.push_back(identifierAssignment);
     LOG("IDENTIFIER");
     current_index++;
+    if(!tokens[current_index].isAssignment()){
+        ERR("Missing Assignment operator in For Loop Parameters");
+        ERR("Found this instead: "<<tokens[current_index].value);
+        exit(EXIT_FAILURE);
+    }
     (*forParameters).createAssign();
     current_index++;
     LOG("ASSIGNMENT");
     children.push_back(forParameters);
 }
 
+// creates an if statement for the parse tree.
 void ParseNode::createIfStatement(){
     ParseNode *ifStatement = new ParseNode{tokens[current_index]};
     LOG(ifStatement->token.value);
     current_index++;
     if(tokens[current_index].type == OPEN_PAREN){
         current_index++;
+        if(!tokens[current_index].isValue()){
+            ERR("Missing Value within if statement");
+            exit(EXIT_FAILURE);
+        }
         ifStatement->children.push_back(createExpression(0));
     }else{
-        std::cerr<<"If statement doesn't have ()"<<std::endl;
+        ERR("If statement doesn't have Openning Parentheses");
+        ERR("Found this instead: "<<tokens[current_index].value);
         exit(EXIT_FAILURE);
     }
     if (tokens[current_index].type == CLOSE_PAREN) {
         current_index++;
         (*ifStatement).createBlock();
     }else{
-        std::cerr << "Mismatched () in ifStatement" << std::endl;
+        ERR("Mismatched () in if Statement");
+        ERR("Found this instead: "<<tokens[current_index].value);
         exit(EXIT_FAILURE);
     }
     if (tokens[current_index].type == ELSE) {
@@ -644,6 +725,7 @@ void ParseNode::createIfStatement(){
     children.push_back(ifStatement);
 }
 
+//create an else statement for the parse tree.
 void ParseNode::createElseStatement() {
     ParseNode* elseStatement = new ParseNode{ tokens[current_index] };
     current_index++;
@@ -653,14 +735,24 @@ void ParseNode::createElseStatement() {
     }
     else if (tokens[current_index].type == OPEN_BLOCK) {
         (*elseStatement).createBlock();
+    }else{
+        ERR("Improper usage of Else statement");
+        ERR("Found this instead: "<<tokens[current_index].value);
+        exit(EXIT_FAILURE);
     }
     children.push_back(elseStatement);
 }
 
+// creates the start of a declaration for the parse tree
 void ParseNode::createDeclaration(){
     ParseNode *declaration = new ParseNode{tokens[current_index]};
     LOG(declaration->token.value);
     current_index++;
+    if(tokens[current_index].type != IDENT){
+        ERR("Missing Identifier after declaration");
+        ERR("Found this instead: "<<tokens[current_index].value);
+        exit(EXIT_FAILURE);
+    }
     ParseNode *ident = new ParseNode{tokens[current_index]};
     current_index++;
     declaration->children.push_back(ident);
@@ -679,11 +771,16 @@ void ParseNode::createDeclaration(){
             (*ident).createSemicolon();
             current_index++;
         }
+    }else{
+        ERR("Improper Declaration. Was looking for function or variable declaration");
+        ERR("Found this instead: "<<tokens[current_index].value);
+        exit(EXIT_FAILURE);
     }
     children.push_back(declaration);
     LOG(declaration->token.value);
 }
 
+//creates an identifier for a parse tree
 void ParseNode::createIdentifier(){
     ParseNode* identifier = new ParseNode{tokens[current_index]};
     current_index++;
@@ -693,22 +790,27 @@ void ParseNode::createIdentifier(){
         current_index++;
         (*identifier).createFunctionUsage();
     }else{
-        std::cerr<<"Incorrect usage of identifier"<<std::endl;
+        ERR("Incorrect usage of identifier");
+        ERR("Found this instead: "<<tokens[current_index].value);
         exit(EXIT_FAILURE);
     }
     (*identifier).createSemicolon();
     children.push_back(identifier);
 }
 
+// creates an assignment for the parse tree
 void ParseNode::createAssign(){
     ParseNode* assignment = new ParseNode{tokens[current_index]};
     LOG(assignment->token.value);
     current_index++;
-    assignment->children.push_back(createExpression(0));
+    if(tokens[current_index].isValue()){
+        assignment->children.push_back(createExpression(0));
+    }
     children.push_back(assignment);
     LOG(assignment->token.value);
 }
 
+// creates the start of a function for the parse tree
 void ParseNode::createFunction() {
     ParseNode* functionParameters = new ParseNode{ tokens[current_index] };
     current_index++;
@@ -726,13 +828,19 @@ void ParseNode::createFunction() {
     else if (tokens[current_index].isValue()) {
         (*functionParameters).createFunctionUsage();
         children.push_back(functionParameters);
+    }else{
+        ERR("Improper usage of function");
+        ERR("Found this instead: "<<tokens[current_index].value);
+        exit(EXIT_FAILURE);
     }
 }
 
+// creates a function usage for a parse tree.
 void ParseNode::createFunctionUsage() {
     while (tokens[current_index].type != CLOSE_PAREN) {
         if (!tokens[current_index].isValue()) {
-            std::cerr << "Incorrect value within FunctionUsage parameter" << std::endl;
+            ERR("Incorrect value within Function Usage parameter");
+            ERR("Found this instead: "<<tokens[current_index].value);
             exit(EXIT_FAILURE);
         }
         ParseNode* parameter = new ParseNode{ tokens[current_index] };
@@ -741,22 +849,30 @@ void ParseNode::createFunctionUsage() {
         if (tokens[current_index].type == COMMA) {
             current_index++;
         }
+        if(current_index>=tokens.size()){
+            ERR("Found end of file instead of closing parentheses");
+            exit(EXIT_FAILURE);
+        }
     }
+
     current_index++;
     LOG(current_index);
 }
 
+//creats a function declaration for a parse tree.
 void ParseNode::createFunctionDeclaration() {
     while (tokens[current_index].type != CLOSE_PAREN) {
         if (!tokens[current_index].isDeclaration()) {
-            std::cerr << "Incorrect Typing within FunctionDeclaration parameter" << std::endl;
+            ERR("Incorrect Typing within Function Declaration parameter");
+            ERR("Found this instead: "<<tokens[current_index].value);
             exit(EXIT_FAILURE);
         }
 
         ParseNode* parameterTyping = new ParseNode{ tokens[current_index] };
         current_index++;
         if (!tokens[current_index].isValue()) {
-            std::cerr << "Incorrect value within FunctionDeclaration parameter" << std::endl;
+            ERR("Incorrect value within FunctionDeclaration parameter");
+            ERR("Found this instead: "<<tokens[current_index].value);
             exit(EXIT_FAILURE);
         }
 
@@ -767,10 +883,16 @@ void ParseNode::createFunctionDeclaration() {
         if (tokens[current_index].type == COMMA) {
             current_index++;
         }
+
+        if (current_index>=tokens.size()) {
+            ERR("Found end of file instead of closing parentheses");
+            exit(EXIT_FAILURE);
+        }
     }
     current_index++;
 }
 
+// creates a semicolon for the parse tree.
 void ParseNode::createSemicolon(){
     LOG(current_index);
     if(tokens[current_index].type==TokenType::SEMICOLON){
@@ -779,23 +901,22 @@ void ParseNode::createSemicolon(){
         LOG(semicolon->token.value);
         children.push_back(semicolon);
     }else{
-        LOG(tokens[current_index].value);
-        std::cerr<<"No semicolon found"<<std::endl;
+        ERR("No semicolon found");
+        ERR("Found this instead: "<<tokens[current_index].value);
         exit(EXIT_FAILURE);
     }
     LOG("Semicolon");
 }
 
-
-
+// creates a binary node (value) for an expression in a parse tree.
 ParseNode* ParseNode::makeBinaryNode(ParseNode* left, Token oper, ParseNode* right){
     ParseNode * binaryNode = new ParseNode{oper, {}};
     binaryNode->children.push_back(left);
     binaryNode->children.push_back(right);
-    //LOG(binaryNode.token.value);
     return binaryNode;
 }
 
+// called when expression continues left
 ParseNode* ParseNode::leftDenotation(ParseNode* left, ParseNode* next){
     ParseNode* binaryOp;
     if(next->token.getAssociativity()){
@@ -808,15 +929,12 @@ ParseNode* ParseNode::leftDenotation(ParseNode* left, ParseNode* next){
     return binaryOp;
 }
 
+// called to create an expression
 ParseNode* ParseNode::createExpression(int minPrec){
     ParseNode *first = new ParseNode{tokens[current_index]};
     LOG("not while "<<current_index);
     current_index++;
     ParseNode *left = first;
-
-    if(current_index==24){
-        LOG("23 index value: "<<tokens[current_index].value);
-    }
 
     while(tokens[current_index].getPrecedence()>minPrec){
         ParseNode *next = new ParseNode{tokens[current_index]};
@@ -827,16 +945,18 @@ ParseNode* ParseNode::createExpression(int minPrec){
     return left;
 }
 
-void ParseNode::printParseTree(ParseNode *node, int indent){
+// prints the entire parse tree
+void ParseNode::printParseTree(ParseNode *node, std::ofstream &output, int indent){
     for(int i = 0; i<indent;i++){
-        std::cout<<"----";
+        output<<"----";
     }
-    std::cout<<node->token.value<<std::endl;
+    output<<node->token.value<<std::endl;
     for(int i = 0; i<node->children.size();i++){
-        printParseTree(node->children[i], indent+1);
+        printParseTree(node->children[i], output, indent+1);
     }
 }
 
+//reads the entire file. Used for debugging.
 internal void readFile(std::ifstream &file){
     std::string line;
     while(std::getline(file,line)){
@@ -846,18 +966,46 @@ internal void readFile(std::ifstream &file){
 
 int main(int argc, char* argv[]){
     //Checks for correct usage of command arguments. Makes sure there is an input file.
-    if(argc!= 2){
+    if(argc!= 3){
         ERR("INCORRECT USAGE");
-        ERR("Please put your input file into the command line arguments.");
+        ERR("Please put your input file and output file into the command line arguments.");
+        ERR("Correct usage: input.txt output.txt");
         return EXIT_FAILURE;
     }
 
     LOG(argv[1]);
 
-    std::ifstream file(argv[1]);
+    //Set up input and output files based on arguments.
+    std::ifstream input(argv[1]);
+    std::ofstream output(argv[2]);
+
+    //Ask if user wants help with syntax
+    while(1){
+        std::cout<<"Does the user need help with syntax? (Y/N)"<<std::endl;
+        std::string decision;
+        std::cin >> decision;
+        if(decision == "Y"){
+            std::cout<<"Okay, showing syntax guide"<<std::endl;
+            std::cout<<"Every Program needs to be encased within brackets {}.\n";
+            std::cout<<"You can put statements within the brackets.\n";
+            std::cout<<"These statements include: return, if, for, while, function declarations, function usage, variable declaration and variable usage.\n";
+            std::cout<<"The syntax is relatively similar to C++ with typing going first, then identifier when declaring something.\n";
+            std::cout<<"However, there are some new int types as I didn't like how c++ dealt with integers.\n";
+            std::cout<<"Instead of using int, you have to use one of the following: uint8, uint16, uint32, uint64, int8, int16, int32, int64\n";
+            std::cout<<"Other than that, there are: double, float, bool, and string\n";
+            std::cout<<"For operations there are the classical c++ operators and an extra exponent operator: ^^\n";
+            std::cout<<"That's pretty much it, happy parsing!\n"<<std::endl;
+        }else if(decision == "N"){
+            std::cout<<"Okay, processing parse tree"<<std::endl;
+            break;
+        }else{
+            std::cout<<"Invalid decision, please try again"<<std::endl;
+        }
+    }
+
 
     //Turns the file string into a vector of tokens.
-    ParseNode::tokens = Token::getTokens(file);
+    ParseNode::tokens = Token::getTokens(input);
 
     for(int i = 0; i<ParseNode::tokens.size();i++){
         LOG(ParseNode::tokens[i].value);
@@ -871,10 +1019,11 @@ int main(int argc, char* argv[]){
     LOG("\n\n\n");
 
     //prints the parse tree
-    ParseNode::printParseTree(parse_tree, 0);
+    ParseNode::printParseTree(parse_tree, output, 0);
 
-    //Closes file after use
-    file.close();
+    //Closes files after use
+    input.close();
+    output.close();
 
     return EXIT_SUCCESS;
 }
