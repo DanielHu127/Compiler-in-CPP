@@ -7,25 +7,7 @@ Woohoo.
 # Single line comment
 
 {
-  int32 foo(int32 a, int32 b){
-    if(a<b){
-      return a;
-    }else if(a>b){
-      return b;
-    }else{
-      return 0;
-    }
-  }
-}
-
-{
-  for(int32 i = 0; i-1<123; i+=1 ){
-    if(i<2){
-      int32 j = 5;
-      while(j>0){
-        j-=1;
-        foo(i , j);
-      }
-    }
-  }
+  string str = "hey";
+  double d = 1.234;
+  float f = 1.234f;
 }
