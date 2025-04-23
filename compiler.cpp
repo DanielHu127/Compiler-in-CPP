@@ -823,6 +823,12 @@ void ParseNode::createFunction() {
             ParseNode* functionBlock = new ParseNode{ tokens[current_index] };
             (*functionBlock).createBlock();
             children.push_back(functionBlock);
+        }else if(tokens[current_index].type == SEMICOLON){
+            createSemicolon();
+        }else{
+            ERR("Improper function usage");
+            ERR("Missing either semicolon or open bracket");
+            exit(EXIT_FAILURE);
         }
     }
     else if (tokens[current_index].isValue()) {

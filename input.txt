@@ -7,5 +7,11 @@ Woohoo.
 # Single line comment
 
 {
-  return;
+    string foo(uint16 x, string str);
+    string foo(uint16 x, string str){
+        return str;
+    }
+    uint16 num = 4 + 8;
+    string word = "hey";
+    foo(num, word);
 }
